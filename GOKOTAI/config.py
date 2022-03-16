@@ -8,7 +8,7 @@ import os
 # バッグモードで実行する場合 テキストコマンドウィンドウに、より多くの情報が書き込まれます。
 # 一般に、以下のような場合に便利です。
 # アドイン開発中はTrueに設定し、開発終了後にFalseに設定し、配布することができます。
-DEBUG = False
+DEBUG = True
 
 # pyファイルがあるフォルダの名前からアドインの名前を取得します。
 # これは、ユニークな名前を必要とする様々なUI要素のために、
@@ -18,5 +18,25 @@ DEBUG = False
 ADDIN_NAME = os.path.basename(os.path.dirname(__file__))
 COMPANY_NAME = 'KANTOKU'
 
-# Palettes
-sample_palette_id = f'{COMPANY_NAME}_{ADDIN_NAME}_palette_id'
+# Name for a directory in user home to store data
+# user_dir_name = f'{ADDIN_NAME}'
+
+# Design Workspace
+design_workspace = 'FusionSolidEnvironment'
+
+# Tabs
+design_tab_id = f'{ADDIN_NAME}_design_tab'
+design_tab_name = f'{ADDIN_NAME}'
+
+# Panels
+create_panel_name = '作成'
+create_panel_id = f'{ADDIN_NAME}_create_panel'
+create_panel_after = ''
+
+# Reference for use in some commands
+all_workspace_names = [
+    'FusionSolidEnvironment', 'GenerativeEnvironment', 'PCBEnvironment', 'PCB3DEnvironment', 'Package3DEnvironment',
+    'FusionRenderEnvironment', 'Publisher3DEnvironment', 'SimulationEnvironment', 'CAMEnvironment', 'DebugEnvironment',
+    'FusionDocumentationEnvironment', 'ElectronEmptyLbrEnvironment', 'ElectronDeviceEnvironment',
+    'ElectronFootprintEnvironment', 'ElectronSymbolEnvironment', 'ElectronPackageEnvironment'
+]
