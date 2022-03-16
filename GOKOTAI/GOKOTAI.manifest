@@ -1,0 +1,13 @@
+{
+	"autodeskProduct":	"Fusion360",
+	"type":	"addin",
+	"id":	"5472da47-5abc-4fc8-88c4-edfa4fafaed7",
+	"author":	"kantoku",
+	"description":	{
+		"":	"Short Knife"
+	},
+	"version":	"0.0.1",
+	"runOnStartup":	false,
+	"supportedOS":	"windows|mac",
+	"editEnabled":	true
+}
