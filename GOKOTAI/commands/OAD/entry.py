@@ -9,7 +9,7 @@ ui = app.userInterface
 
 
 # TODO *** コマンドのID情報を指定します。 ***
-CMD_ID = f'{config.COMPANY_NAME}_{config.ADDIN_NAME}_cmdDialog'
+CMD_ID = f'{config.COMPANY_NAME}_{config.ADDIN_NAME}_openAffectedDocuments'
 CMD_NAME = '関連ドキュメントを開く'
 CMD_Description = '変更された場合、影響を受けるドキュメントを開きます'
 
