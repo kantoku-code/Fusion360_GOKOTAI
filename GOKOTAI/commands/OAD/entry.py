@@ -21,9 +21,16 @@ IS_PROMOTED = True
 # コマンドの横に挿入されます。配置するコマンドを指定しない場合は
 # 最後に挿入されます。
 
-WORKSPACE_ID = 'FusionSolidEnvironment'
-PANEL_ID = 'UtilityPanel'
+WORKSPACE_ID = config.design_workspace
+TAB_ID = config.design_tab_id
+TAB_NAME = config.design_tab_name
+
+PANEL_ID = config.doc_panel_id
+PANEL_NAME = config.doc_panel_name
+PANEL_AFTER = config.doc_panel_after
+
 COMMAND_BESIDE_ID = ''
+
 
 # コマンドアイコンのリソースの場所、ここではこのディレクトリの中に
 # "resources" という名前のサブフォルダを想定しています。
@@ -46,7 +53,6 @@ _datas: list = []
 _tableIpt: adsk.core.TableCommandInput = None
 
 
-
 # アドイン実行時に実行されます。
 def start():
     # コマンドの定義を作成する。
@@ -65,8 +71,14 @@ def start():
     # ボタンが作成される対象のワークスペースを取得します。
     workspace = ui.workspaces.itemById(WORKSPACE_ID)
 
+    toolbar_tab = workspace.toolbarTabs.itemById(TAB_ID)
+    if toolbar_tab is None:
+        toolbar_tab = workspace.toolbarTabs.add(TAB_ID, TAB_NAME)
+
     # ボタンが作成されるパネルを取得します。
     panel = workspace.toolbarPanels.itemById(PANEL_ID)
+    if panel is None:
+        panel = toolbar_tab.toolbarPanels.add(PANEL_ID, PANEL_NAME, PANEL_AFTER, False)
 
     # 指定された既存のコマンドの後に、UI のボタンコマンド制御を作成します。
     control = panel.controls.addCommand(cmd_def, COMMAND_BESIDE_ID, False)

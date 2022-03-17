@@ -29,6 +29,10 @@ design_tab_id = f'{ADDIN_NAME}_design_tab'
 design_tab_name = f'{ADDIN_NAME}'
 
 # Panels
+doc_panel_name = 'ドキュメント'
+doc_panel_id = f'{ADDIN_NAME}_doc_panel'
+doc_panel_after = ''
+
 create_panel_name = '作成'
 create_panel_id = f'{ADDIN_NAME}_create_panel'
 create_panel_after = ''
