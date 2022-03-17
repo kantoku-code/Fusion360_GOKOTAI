@@ -5,12 +5,14 @@
 # entryという名前のデフォルトのモジュールがあるとして、エイリアス(import "entry" as "my_module")を使う必要があります。
 from .OAD import entry as oad
 from .MinimumBoundingBox import entry as minimumBoundingBox
+from .MinimumBoundingRectangle import entry as minimumBoundingRectangle
 
 # TODO インポートしたモジュールをこのリストに追加してください。
 # Fusionは自動的にstart()とstop()関数を呼び出します。
 commands = [
     oad,
     minimumBoundingBox,
+    minimumBoundingRectangle,
 ]
 
 
