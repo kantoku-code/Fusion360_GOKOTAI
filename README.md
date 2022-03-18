@@ -1,6 +1,8 @@
 # ***Fusion360 GOKOTAI***
 短刀のような小さな機能を集めたFusion360用アドインです。
 
+(主にフォーラムの回答用に作成されたものをかき集めたものです。)
+
 ---
 
 ## **インストール**:
@@ -16,6 +18,7 @@
 + [関連ドキュメントを開く](./GOKOTAI/commands/OAD/) : 関連するドキュメントを開く事をサポートしています。
 + [最小境界ボックス](./GOKOTAI/commands/MinimumBoundingBox/) : ボディの最小(とは限らない)境界ボックスを作成します。
 + [最小境界長方形](./GOKOTAI/commands/MinimumBoundingRectangle/) : 平坦な面の境界から最小となる長方形のスケッチを作成します。
++ [メテオ](./GOKOTAI/commands/Meteor/) : 指定したボディにZの上方向から大量の点を降り注ぎます。
 
 ---
 

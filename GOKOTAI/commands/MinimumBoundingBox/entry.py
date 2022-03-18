@@ -1,4 +1,3 @@
-# Open Affected Documents
 import adsk.core
 import adsk.fusion
 import os

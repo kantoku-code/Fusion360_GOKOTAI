@@ -6,6 +6,7 @@
 from .OAD import entry as oad
 from .MinimumBoundingBox import entry as minimumBoundingBox
 from .MinimumBoundingRectangle import entry as minimumBoundingRectangle
+from .Meteor import entry as meteor
 
 # TODO インポートしたモジュールをこのリストに追加してください。
 # Fusionは自動的にstart()とstop()関数を呼び出します。
@@ -13,6 +14,7 @@ commands = [
     oad,
     minimumBoundingBox,
     minimumBoundingRectangle,
+    meteor,
 ]
 
 
