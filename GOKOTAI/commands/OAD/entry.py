@@ -160,17 +160,18 @@ def command_created(args: adsk.core.CommandCreatedEventArgs):
             0
         )
 
+        docInfo: adsk.core.StringValueCommandInput = inputs.addStringValueInput(
+            f'name{rowIdx}',
+            'data_name',
+            getDocumentFullName(df),
+        )
+        docInfo.isReadOnly = True
         _tableIpt.addCommandInput(
-            inputs.addTextBoxCommandInput(
-                f'name{rowIdx}',
-                'data_name',
-                getDocumentFullName(df),
-                1,
-                True
-            ),
+            docInfo,
             rowIdx,
             1
         )
+
 
     # **event**
     futil.add_handler(
