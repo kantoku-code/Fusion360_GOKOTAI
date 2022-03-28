@@ -145,6 +145,17 @@ def command_created(args: adsk.core.CommandCreatedEventArgs):
         10,
         '1:5'
     )
+    _tableIpt.hasGrid = False
+    _tableIpt.isFullWidth = True
+
+    tblStyle = adsk.core.TablePresentationStyles
+    _tableIpt.tablePresentationStyle = tblStyle.itemBorderTablePresentationStyle
+
+    rowCount = len(_datas)
+    if rowCount > 10:
+        _tableIpt.maximumVisibleRows = 10
+    elif rowCount > 4:
+        _tableIpt.maximumVisibleRows = rowCount
 
     df: adsk.core.DataFile
     for rowIdx, df in enumerate(_datas):
