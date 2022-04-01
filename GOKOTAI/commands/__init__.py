@@ -7,14 +7,18 @@ from .OAD import entry as oad
 from .MinimumBoundingBox import entry as minimumBoundingBox
 from .MinimumBoundingRectangle import entry as minimumBoundingRectangle
 from .Meteor import entry as meteor
+from .DocumentTree import entry as documentTree
+# from .ThreadSwitch import entry as threadSwitch
 
 # TODO インポートしたモジュールをこのリストに追加してください。
 # Fusionは自動的にstart()とstop()関数を呼び出します。
 commands = [
+    documentTree,
     oad,
     minimumBoundingBox,
     minimumBoundingRectangle,
     meteor,
+    # threadSwitch,
 ]
 
 

@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>jstree basic demos</title>
+    <style>
+      /* html {
+        margin: 0;
+        padding: 0;
+        font-size: 100%;
+      }
+      body {
+        max-width: 800px;
+        min-width: 300px;
+        margin: 0 auto;
+        padding: 20px 10px;
+        font-size: 14px;
+        font-size: 1.4em;
+      }
+      .tree {
+        overflow: auto;
+        border: 1px solid silver;
+        min-height: 100px;
+      } */
+    </style>
+    <link rel="stylesheet" href="./dist/themes/default/style.min.css" />
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css"
+    />
+    <!-- Bootstrap CSS -->
+    <link
+      rel="stylesheet"
+      href="https://stackpath.bootstrapcdn.com/bootstrap/5.0.0-alpha1/css/bootstrap.min.css"
+      integrity="sha384-r4NyP46KrjDleawBgD5tp8Y7UzmLA05oM1iAEQ17CSuDqnUK2+k9luXQOfXJCJ4I"
+      crossorigin="anonymous"
+    />
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.4.0/font/bootstrap-icons.css"
+    />
+  </head>
+  <body>
+    <div class="container">
+      <div class="row g-1">
+        <div class="col-3">
+          <input
+            id="search-input"
+            type="text"
+            class="form-control"
+            id="formGroupExampleInput"
+            placeholder="search"
+          />
+          <!-- <div class="p-1 border bg-light"> -->
+          <!-- <input id="search-input" class="search-input" /> -->
+        </div>
+        <!-- <div
+            class="p-1 border bg-light"
+            style="overflow-y: scroll; position: relative; right: 10px"
+          > -->
+        <!-- <div data-bs-spy="scroll" data-bs-target="#navbar-example2" data-bs-offset="0" class="scrollspy-example" tabindex="0"></div> -->
+        <div class="col-9">
+          <div id="tree" class="tree"></div>
+          <!-- </div> -->
+        </div>
+      </div>
+    </div>
+
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+    <script src="./dist/jstree.min.js"></script>
+
+    <script>
+      $(function () {
+        var adskWaiter = setInterval(function () {
+          if (window.adsk) {
+            clearInterval(adskWaiter);
+
+            let ret = adsk.fusionSendData("htmlLoaded", "");
+            let obj = JSON.parse(ret);
+            $("#tree").jstree(true).settings.core.data = obj.data;
+            $("#tree").jstree(true).refresh();
+          }
+        }, 100);
+      });
+
+      $("#tree").jstree({
+        core: {
+          multiple: false,
+          themes: { stripes: true },
+          data: [
+            {
+              text: "Loading...",
+              icon: "fad fa-spinner",
+            },
+          ],
+        },
+        plugins: ["search"],
+
+        // plugins: ["search", "contextmenu"],
+        // contextmenu: {
+        //   items: function ($node) {
+        //     return {
+        //       createFolder: {
+        //         separator_before: false,
+        //         separator_after: false,
+        //         label: "新規フォルダ作成",
+        //         _disabled: function (data) {
+        //           return (
+        //             $.jstree.reference(data.reference).get_node(data.reference)
+        //               .icon != "jstree-folder"
+        //           );
+        //         },
+        //         action: function (data) {
+        //           var inst = $.jstree.reference(data.reference),
+        //             obj = inst.get_node(data.reference);
+        //           inst.create_node(
+        //             obj,
+        //             { text: "New Folder", icon: "jstree-folder" },
+        //             "last",
+        //             function (new_node) {
+        //               try {
+        //                 inst.edit(new_node);
+        //               } catch (ex) {
+        //                 setTimeout(function () {
+        //                   inst.edit(new_node);
+        //                 }, 0);
+        //               }
+        //             }
+        //           );
+        //         },
+        //       },
+        //       createFile: {
+        //         separator_before: false,
+        //         separator_after: false,
+        //         label: "新規ファイル作成",
+        //         _disabled: function (data) {
+        //           return (
+        //             $.jstree.reference(data.reference).get_node(data.reference)
+        //               .icon != "jstree-folder"
+        //           );
+        //         },
+        //         action: function (data) {
+        //           var inst = $.jstree.reference(data.reference),
+        //             obj = inst.get_node(data.reference);
+        //           inst.create_node(
+        //             obj,
+        //             { text: "New File", icon: "jstree-file" },
+        //             "last",
+        //             function (new_node) {
+        //               try {
+        //                 inst.edit(new_node);
+        //               } catch (ex) {
+        //                 setTimeout(function () {
+        //                   inst.edit(new_node);
+        //                 }, 0);
+        //               }
+        //             }
+        //           );
+        //         },
+        //       },
+        //       rename: {
+        //         separator_before: true,
+        //         separator_after: false,
+        //         label: "名称の変更",
+        //         _disabled: false,
+        //         action: function (data) {
+        //           var inst = $.jstree.reference(data.reference),
+        //             obj = inst.get_node(data.reference);
+        //           inst.edit(obj);
+        //         },
+        //       },
+        //       remove: {
+        //         separator_before: false,
+        //         separator_after: false,
+        //         label: "削除",
+        //         _disabled: function (data) {
+        //           return (
+        //             $.jstree.reference(data.reference).get_node(data.reference)
+        //               .parent == "#"
+        //           );
+        //         },
+        //         action: function (data) {
+        //           var inst = $.jstree.reference(data.reference),
+        //             obj = inst.get_node(data.reference);
+        //           if (inst.is_selected(obj)) {
+        //             inst.delete_node(inst.get_selected());
+        //           } else {
+        //             inst.delete_node(obj);
+        //           }
+        //         },
+        //       },
+        //       cut: {
+        //         separator_before: true,
+        //         separator_after: false,
+        //         label: "切り取り",
+        //         _disabled: function (data) {
+        //           return (
+        //             $.jstree.reference(data.reference).get_node(data.reference)
+        //               .parent == "#"
+        //           );
+        //         },
+        //         action: function (data) {
+        //           var inst = $.jstree.reference(data.reference),
+        //             obj = inst.get_node(data.reference);
+        //           if (inst.is_selected(obj)) {
+        //             inst.cut(inst.get_top_selected());
+        //           } else {
+        //             inst.cut(obj);
+        //           }
+        //         },
+        //       },
+        //       copy: {
+        //         separator_before: false,
+        //         icon: false,
+        //         separator_after: false,
+        //         label: "コピー",
+        //         _disabled: function (data) {
+        //           return (
+        //             $.jstree.reference(data.reference).get_node(data.reference)
+        //               .parent == "#"
+        //           );
+        //         },
+        //         action: function (data) {
+        //           var inst = $.jstree.reference(data.reference),
+        //             obj = inst.get_node(data.reference);
+        //           if (inst.is_selected(obj)) {
+        //             inst.copy(inst.get_top_selected());
+        //           } else {
+        //             inst.copy(obj);
+        //           }
+        //         },
+        //       },
+        //       paste: {
+        //         separator_before: false,
+        //         separator_after: false,
+        //         label: "貼り付け",
+        //         icon: false,
+        //         _disabled: function (data) {
+        //           if (
+        //             $.jstree.reference(data.reference).get_node(data.reference)
+        //               .icon != "jstree-folder"
+        //           )
+        //             return true;
+        //           return !$.jstree.reference(data.reference).can_paste();
+        //         },
+        //         action: function (data) {
+        //           var inst = $.jstree.reference(data.reference),
+        //             obj = inst.get_node(data.reference);
+        //           inst.paste(obj);
+        //           console.log(obj);
+        //         },
+        //       },
+        //     };
+        //   },
+        // },
+      });
+
+      // double click
+      $("#tree").on("dblclick", ".jstree-anchor", function (e) {
+        var args = {
+          id: $(this).parent().attr("id"),
+        };
+        adsk.fusionSendData("execScript", JSON.stringify(args));
+      });
+
+      // click
+      $("#tree").on("click", ".jstree-anchor", function (e) {
+        var args = {
+          id: $(this).parent().attr("id"),
+        };
+        adsk.fusionSendData("click", JSON.stringify(args));
+      });
+
+      // mouseover
+      // $("#tree").on("mouseover", ".jstree-anchor", function (e) {
+      //   var args = {
+      //     id: $(this).parent().attr("id"),
+      //   };
+      //   adsk.fusionSendData("mouseover", JSON.stringify(args));
+      // });
+
+      var to = false;
+      $("#search-input").keyup(function () {
+        if (to) {
+          clearTimeout(to);
+        }
+        to = setTimeout(function () {
+          var v = $("#search-input").val();
+          $("#tree").jstree(true).search(v);
+        }, 250);
+      });
+    </script>
+  </body>
+</html>
