@@ -95,159 +95,23 @@
           ],
         },
         plugins: ["search"],
-
         // plugins: ["search", "contextmenu"],
         // contextmenu: {
         //   items: function ($node) {
         //     return {
-        //       createFolder: {
+        //       open_active: {
         //         separator_before: false,
         //         separator_after: false,
-        //         label: "新規フォルダ作成",
-        //         _disabled: function (data) {
-        //           return (
-        //             $.jstree.reference(data.reference).get_node(data.reference)
-        //               .icon != "jstree-folder"
-        //           );
-        //         },
+        //         label: "オープン/アクティブ",
+        //         _disabled: function (data) {},
         //         action: function (data) {
         //           var inst = $.jstree.reference(data.reference),
         //             obj = inst.get_node(data.reference);
-        //           inst.create_node(
-        //             obj,
-        //             { text: "New Folder", icon: "jstree-folder" },
-        //             "last",
-        //             function (new_node) {
-        //               try {
-        //                 inst.edit(new_node);
-        //               } catch (ex) {
-        //                 setTimeout(function () {
-        //                   inst.edit(new_node);
-        //                 }, 0);
-        //               }
-        //             }
-        //           );
-        //         },
-        //       },
-        //       createFile: {
-        //         separator_before: false,
-        //         separator_after: false,
-        //         label: "新規ファイル作成",
-        //         _disabled: function (data) {
-        //           return (
-        //             $.jstree.reference(data.reference).get_node(data.reference)
-        //               .icon != "jstree-folder"
-        //           );
-        //         },
-        //         action: function (data) {
-        //           var inst = $.jstree.reference(data.reference),
-        //             obj = inst.get_node(data.reference);
-        //           inst.create_node(
-        //             obj,
-        //             { text: "New File", icon: "jstree-file" },
-        //             "last",
-        //             function (new_node) {
-        //               try {
-        //                 inst.edit(new_node);
-        //               } catch (ex) {
-        //                 setTimeout(function () {
-        //                   inst.edit(new_node);
-        //                 }, 0);
-        //               }
-        //             }
-        //           );
-        //         },
-        //       },
-        //       rename: {
-        //         separator_before: true,
-        //         separator_after: false,
-        //         label: "名称の変更",
-        //         _disabled: false,
-        //         action: function (data) {
-        //           var inst = $.jstree.reference(data.reference),
-        //             obj = inst.get_node(data.reference);
-        //           inst.edit(obj);
-        //         },
-        //       },
-        //       remove: {
-        //         separator_before: false,
-        //         separator_after: false,
-        //         label: "削除",
-        //         _disabled: function (data) {
-        //           return (
-        //             $.jstree.reference(data.reference).get_node(data.reference)
-        //               .parent == "#"
-        //           );
-        //         },
-        //         action: function (data) {
-        //           var inst = $.jstree.reference(data.reference),
-        //             obj = inst.get_node(data.reference);
-        //           if (inst.is_selected(obj)) {
-        //             inst.delete_node(inst.get_selected());
-        //           } else {
-        //             inst.delete_node(obj);
-        //           }
-        //         },
-        //       },
-        //       cut: {
-        //         separator_before: true,
-        //         separator_after: false,
-        //         label: "切り取り",
-        //         _disabled: function (data) {
-        //           return (
-        //             $.jstree.reference(data.reference).get_node(data.reference)
-        //               .parent == "#"
-        //           );
-        //         },
-        //         action: function (data) {
-        //           var inst = $.jstree.reference(data.reference),
-        //             obj = inst.get_node(data.reference);
-        //           if (inst.is_selected(obj)) {
-        //             inst.cut(inst.get_top_selected());
-        //           } else {
-        //             inst.cut(obj);
-        //           }
-        //         },
-        //       },
-        //       copy: {
-        //         separator_before: false,
-        //         icon: false,
-        //         separator_after: false,
-        //         label: "コピー",
-        //         _disabled: function (data) {
-        //           return (
-        //             $.jstree.reference(data.reference).get_node(data.reference)
-        //               .parent == "#"
-        //           );
-        //         },
-        //         action: function (data) {
-        //           var inst = $.jstree.reference(data.reference),
-        //             obj = inst.get_node(data.reference);
-        //           if (inst.is_selected(obj)) {
-        //             inst.copy(inst.get_top_selected());
-        //           } else {
-        //             inst.copy(obj);
-        //           }
-        //         },
-        //       },
-        //       paste: {
-        //         separator_before: false,
-        //         separator_after: false,
-        //         label: "貼り付け",
-        //         icon: false,
-        //         _disabled: function (data) {
-        //           if (
-        //             $.jstree.reference(data.reference).get_node(data.reference)
-        //               .icon != "jstree-folder"
-        //           )
-        //             return true;
-        //           return !$.jstree.reference(data.reference).can_paste();
-        //         },
-        //         action: function (data) {
-        //           var inst = $.jstree.reference(data.reference),
-        //             obj = inst.get_node(data.reference);
-        //           inst.paste(obj);
-        //           console.log(obj);
+        //           var args = {
+        //             // id: $(this).parent().attr("id"),
+        //             id: $(inst).parent().attr("id"),
+        //           };
+        //           adsk.fusionSendData("open_active", JSON.stringify(args));
         //         },
         //       },
         //     };

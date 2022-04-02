@@ -167,6 +167,12 @@ def palette_incoming(html_args: adsk.core.HTMLEventArgs):
             'data': jstreeJson,
         })
 
+    elif html_args.action == 'open_active':
+        data = json.loads(html_args.data)
+        # if data['value']:
+        #     removeCG()
+        # .inst.element["0"].align
+
 def command_destroy(args: adsk.core.CommandEventArgs):
     futil.log(f'{CMD_NAME}: {args.firingEvent.name}')
 
