@@ -51,6 +51,7 @@ ICON_FOLDER = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'resource
 # they are not released and garbage collected.
 local_handlers = []
 
+_dataContainer = None
 
 # Executed when add-in is run.
 def start():
@@ -156,10 +157,11 @@ def palette_navigating(args: adsk.core.NavigationEventArgs):
 def palette_incoming(html_args: adsk.core.HTMLEventArgs):
     futil.log(f'{CMD_NAME}: {html_args.firingEvent.name}')
 
+    global _dataContainer
     if html_args.action == 'htmlLoaded':
 
-        dfs = DataFileContainer()
-        jstreeJson = dfs.getJson()
+        _dataContainer = DataFileContainer()
+        jstreeJson = _dataContainer.getJson()
 
 
         html_args.returnData = json.dumps({
@@ -169,12 +171,47 @@ def palette_incoming(html_args: adsk.core.HTMLEventArgs):
 
     elif html_args.action == 'open_active':
         data = json.loads(html_args.data)
-        # if data['value']:
-        #     removeCG()
-        # .inst.element["0"].align
+
+        datafile: adsk.core.DataFile = _dataContainer.getDataFile(
+            int(data['id'])
+        )
+
+        if not datafile:
+            return
+
+        execOpenDataFiles([datafile])
 
 def command_destroy(args: adsk.core.CommandEventArgs):
     futil.log(f'{CMD_NAME}: {args.firingEvent.name}')
 
     global local_handlers
     local_handlers = []
+
+
+# ****************
+# ファイルを開く
+def execOpenDataFiles(
+    dataFiles: list):
+
+    docs: adsk.core.Documents = futil.app.documents
+
+    def getDocFromDatafileId(id) -> adsk.fusion.FusionDocument:
+        for d in docs:
+            if not d.dataFile:
+                continue
+
+            if d.dataFile.id == id:
+                return d
+        return None
+
+    df: adsk.core.DataFile
+    for df in dataFiles:
+        doc: adsk.fusion.FusionDocument = getDocFromDatafileId(df.id)
+        adsk.doEvents()
+        # doc = None
+        if doc:
+            futil.log(f'{CMD_NAME}:doc.activate')
+            doc.activate()
+        else:
+            futil.log(f'{CMD_NAME}:doc.open')
+            docs.open(df)
