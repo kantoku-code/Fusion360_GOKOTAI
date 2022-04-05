@@ -3,9 +3,8 @@ import adsk.core
 import os
 from ...lib import fusion360utils as futil
 from ... import config
-# from datetime import datetime
+import traceback
 from .DataFileContainer import DataFileContainer
-
 
 app = adsk.core.Application.get()
 ui = app.userInterface
@@ -52,6 +51,10 @@ ICON_FOLDER = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'resource
 local_handlers = []
 
 _dataContainer = None
+_myCustomEventId = 'MyCustomEventId'
+_customEvent: adsk.core.CustomEvent = None
+
+
 
 # Executed when add-in is run.
 def start():
@@ -111,6 +114,18 @@ def stop():
 def command_created(args: adsk.core.CommandCreatedEventArgs):
     futil.log(f'{CMD_NAME}: Command created event.')
 
+    # global _myCustomEventId, _customEvent
+    # try:
+    #     futil.app.unregisterCustomEvent(_myCustomEventId)
+    # except:
+    #     pass
+    # _customEvent = futil.app.registerCustomEvent(_myCustomEventId)
+    # onCustomEvent = MyCustomEventHandle()
+    # _customEvent.add(onCustomEvent)
+
+    # eventArgs = {'Value': 1}
+    # app.fireCustomEvent(_myCustomEventId, json.dumps(eventArgs)) 
+
     futil.add_handler(args.command.execute, command_execute, local_handlers=local_handlers)
     futil.add_handler(args.command.destroy, command_destroy, local_handlers=local_handlers)
 
@@ -145,6 +160,18 @@ def command_execute(args: adsk.core.CommandEventArgs):
 
     palette.isVisible = True
 
+    global _myCustomEventId, _customEvent
+    try:
+        futil.app.unregisterCustomEvent(_myCustomEventId)
+    except:
+        pass
+    _customEvent = futil.app.registerCustomEvent(_myCustomEventId)
+    onCustomEvent = MyCustomEventHandle()
+    _customEvent.add(onCustomEvent)
+
+    eventArgs = {'Value': 1}
+    app.fireCustomEvent(_myCustomEventId, json.dumps(eventArgs))
+    a=1
 
 def palette_closed(args: adsk.core.UserInterfaceGeneralEventArgs):
     futil.log(f'{CMD_NAME}: {args.firingEvent.name}')
@@ -179,6 +206,10 @@ def palette_incoming(html_args: adsk.core.HTMLEventArgs):
         if not datafile:
             return
 
+        if datafile.fileExtension == 'f2d':
+            futil.ui.messageBox('f2dファイルのオープンは中止しています')
+            return
+
         execOpenDataFiles([datafile])
 
 def command_destroy(args: adsk.core.CommandEventArgs):
@@ -187,8 +218,25 @@ def command_destroy(args: adsk.core.CommandEventArgs):
     global local_handlers
     local_handlers = []
 
+    global _myCustomEventId
+    futil.app.unregisterCustomEvent(_myCustomEventId)
+
 
 # ****************
+
+class MyCustomEventHandle(adsk.core.CustomEventHandler):
+    def __init__(self):
+        super().__init__()
+    def notify(self, args):
+        try:
+            futil.log(f'{CMD_NAME}: {args.firingEvent.name}')
+            futil.log('hoge')
+            a=1
+        except:
+            futil.log('Failed:\n{}'.format(traceback.format_exc()))
+
+
+
 # ファイルを開く
 def execOpenDataFiles(
     dataFiles: list):
@@ -208,10 +256,9 @@ def execOpenDataFiles(
     for df in dataFiles:
         doc: adsk.fusion.FusionDocument = getDocFromDatafileId(df.id)
         adsk.doEvents()
-        # doc = None
         if doc:
-            futil.log(f'{CMD_NAME}:doc.activate')
+            futil.log(f'{CMD_NAME}: call doc.activate')
             doc.activate()
         else:
-            futil.log(f'{CMD_NAME}:doc.open')
+            futil.log(f'{CMD_NAME}: call doc.open')
             docs.open(df)
