@@ -8,6 +8,7 @@ from .MinimumBoundingBox import entry as minimumBoundingBox
 from .MinimumBoundingRectangle import entry as minimumBoundingRectangle
 from .Meteor import entry as meteor
 from .DocumentTree import entry as documentTree
+from .JointCurve import entry as jointCurve
 # from .ThreadSwitch import entry as threadSwitch
 
 # TODO インポートしたモジュールをこのリストに追加してください。
@@ -17,6 +18,7 @@ commands = [
     oad,
     minimumBoundingBox,
     minimumBoundingRectangle,
+    jointCurve,
     meteor,
     # threadSwitch,
 ]
