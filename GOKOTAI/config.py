@@ -41,6 +41,11 @@ modify_panel_name = '修正'
 modify_panel_id = f'{ADDIN_NAME}_modify_panel'
 modify_panel_after = ''
 
+inspect_panel_name = '検査'
+inspect_panel_id = f'{ADDIN_NAME}_Inspect_panel'
+inspect_panel_after = ''
+
+
 # Reference for use in some commands
 all_workspace_names = [
     'FusionSolidEnvironment', 'GenerativeEnvironment', 'PCBEnvironment', 'PCB3DEnvironment', 'Package3DEnvironment',
