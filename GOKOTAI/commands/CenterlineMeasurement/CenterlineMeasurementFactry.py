@@ -69,6 +69,44 @@ def drawArc(
         self.endPoint
     )
 
+def getCenters(
+    face: adsk.fusion.BRepFace):
+
+    outerEdges = [l.edges for l in face.loops if l.isOuter]
+    edges = []
+    for es in outerEdges:
+        for e in es:
+            edges.append(e)
+
+    surfEva: adsk.core.SurfaceEvaluator = face.evaluator
+    prms = []
+    edge: adsk.fusion.BRepEdge = None
+    for edge in edges:
+        edgeEva: adsk.core.CurveEvaluator3D = edge.evaluator
+        _, sPrm, ePrm = edgeEva.getParameterExtents()
+        _, points = edgeEva.getStrokes(
+            sPrm,
+            ePrm,
+            0.00001
+        )
+
+        _, surfPrms = surfEva.getParametersAtPoints(points)
+
+        if surfPrms[0].y > 0:
+            prms.append(min(surfPrms, key=lambda p: p.y))
+        else:
+            prms.append(max(surfPrms, key=lambda p: p.y))
+
+    centers = []
+    for prm in prms:
+        _, pnt = surfEva.getPointAtParameter(prm)
+        _, normal = surfEva.getNormalAtParameter(prm)
+        _, _, maxCurvature, _ = surfEva.getCurvature(prm)
+        normal.scaleBy(1 / maxCurvature)
+        pnt.translateBy(normal)
+        centers.append(pnt)
+
+    return centers
 
 def getCenterCurveByTorus(
     self,
@@ -80,7 +118,9 @@ def getCenterCurveByTorus(
     radius = torus.majorRadius
 
     # circle
-    if face.edges.count < 1:
+    outerEdges = [l.edges for l in face.loops if l.isOuter]
+    # if face.edges.count < 1:
+    if len(outerEdges) < 1:
         circle: adsk.core.Circle3D = adsk.core.Circle3D.createByCenter(
             center,
             normal,
@@ -91,58 +131,48 @@ def getCenterCurveByTorus(
             'length': math.pi * 2 * radius,
         }
 
-    pnts = [e.geometry.center for e in face.edges 
-        if e.geometry.classType() == adsk.core.Circle3D.classType()]
-
-    if len(pnts) < 2:
-        return None
-
     # arc
     cog: adsk.core.Point3D = face.centroid
     vecCog: adsk.core.Vector3D = center.vectorTo(cog)
-    lst = []
-    for p1, p2 in itertools.combinations(pnts, 2):
-        v1: adsk.core.Vector3D = center.vectorTo(p1)
-        v2: adsk.core.Vector3D = center.vectorTo(p2)
 
-        ang = v1.angleTo(v2)
-        if not vecCog.dotProduct(v1) > 0:
-            ang = math.pi * 2 - ang
+    centers = getCenters(face)
+    p1: adsk.core.Point3D = centers[0]
+    p2: adsk.core.Point3D = centers[1]
 
-        arc: adsk.core.Arc3D = adsk.core.Arc3D.createByCenter(
-            adsk.core.Point3D.create(0,0,0),
-            adsk.core.Vector3D.create(0,0,1),
-            adsk.core.Vector3D.create(1,0,0),
-            radius,
-            0,
-            ang
-        )
+    v1: adsk.core.Vector3D = center.vectorTo(p1)
+    v2: adsk.core.Vector3D = center.vectorTo(p2)
 
-        mat: adsk.core.Matrix3D = adsk.core.Matrix3D.create()
-        xVec: adsk.core.Vector3D = center.vectorTo(p1)
-        xVec.normalize()
-        yVec: adsk.core.Vector3D = xVec.crossProduct(normal)
-        yVec.normalize()
-        mat.setWithCoordinateSystem(
-            center,
-            xVec,
-            yVec,
-            normal
-        )
+    ang = v1.angleTo(v2)
+    if not vecCog.dotProduct(v1) > 0:
+        ang = math.pi * 2 - ang
 
-        arc.transformBy(mat)
+    arc: adsk.core.Arc3D = adsk.core.Arc3D.createByCenter(
+        adsk.core.Point3D.create(0,0,0),
+        adsk.core.Vector3D.create(0,0,1),
+        adsk.core.Vector3D.create(1,0,0),
+        radius,
+        0,
+        ang
+    )
 
-        lst.append(
-            {
-                'obj': arc,
-                'length': ang * radius,
-            }
-        )
+    mat: adsk.core.Matrix3D = adsk.core.Matrix3D.create()
+    xVec: adsk.core.Vector3D = center.vectorTo(p1)
+    xVec.normalize()
+    yVec: adsk.core.Vector3D = xVec.crossProduct(normal)
+    yVec.normalize()
+    mat.setWithCoordinateSystem(
+        center,
+        xVec,
+        yVec,
+        normal
+    )
 
-    if len(lst) < 1:
-        return None
+    arc.transformBy(mat)
 
-    return max(lst, key=lambda x: x['length'])
+    return {
+        'obj': arc,
+        'length': ang * radius,
+    }
 
 
 def getPerpendicularVecter(
@@ -286,10 +316,12 @@ class CenterlineMeasurementFactry:
         root: adsk.fusion.Component = des.rootComponent
 
         cgGroup: adsk.fusion.CustomGraphicsGroup = root.customGraphicsGroups.add()
+        lineStyle: adsk.fusion.LineStylePatterns = adsk.fusion.LineStylePatterns.centerLineStylePattern
         for crv in crvs:
             cgCrv: adsk.fusion.CustomGraphicsCurve = cgGroup.addCurve(crv)
             cgCrv.weight = 3
             cgCrv.color = CG_COLOR
+            cgCrv.lineStylePattern = lineStyle
 
         return cgGroup
 
