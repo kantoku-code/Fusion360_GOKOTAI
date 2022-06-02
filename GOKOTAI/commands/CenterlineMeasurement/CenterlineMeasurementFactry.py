@@ -79,11 +79,8 @@ def getCenterCurveByTorus(
     normal: adsk.core.Vector3D = torus.axis
     radius = torus.majorRadius
 
-    pnts = [e.geometry.center for e in face.edges 
-        if e.geometry.classType() == adsk.core.Circle3D.classType()]
-
     # circle
-    if len(pnts) < 2:
+    if face.edges.count < 1:
         circle: adsk.core.Circle3D = adsk.core.Circle3D.createByCenter(
             center,
             normal,
@@ -94,6 +91,11 @@ def getCenterCurveByTorus(
             'length': math.pi * 2 * radius,
         }
 
+    pnts = [e.geometry.center for e in face.edges 
+        if e.geometry.classType() == adsk.core.Circle3D.classType()]
+
+    if len(pnts) < 2:
+        return None
 
     # arc
     cog: adsk.core.Point3D = face.centroid
@@ -138,38 +140,70 @@ def getCenterCurveByTorus(
         )
 
     if len(lst) < 1:
-        return 0
-
-    return max(lst, key=lambda x: x['length'])
-
-
-def getCenterCurveByCone(
-    self,
-    face: adsk.fusion.BRepFace):
-
-    edges = [e.geometry for e in face.edges]
-    lst = []
-    for e1, e2 in itertools.combinations(edges, 2):
-        if not e1.normal.isParallelTo(e2.normal):
-            continue
-
-        p1: adsk.core.Point3D = e1.center
-        p2: adsk.core.Point3D = e2.center
-        line: adsk.core.Line3D = adsk.core.Line3D.create(
-            p1,
-            p2,
-        )
-        lst.append(
-            {
-                'obj': line,
-                'length': e1.center.distanceTo(e2.center),
-            }
-        )
-
-    if len(lst) < 1:
         return None
 
     return max(lst, key=lambda x: x['length'])
+
+
+def getPerpendicularVecter(
+    vec: adsk.core.Vector3D) -> adsk.core.Vector3D:
+
+    v1: adsk.core.Vector3D = adsk.core.Vector3D.create(1,0,0)
+    if vec.isParallelTo(v1):
+        v1 = adsk.core.Vector3D.create(0,1,0)
+
+    v2: adsk.core.Vector3D = vec.crossProduct(v1)
+
+    return vec.crossProduct(v2)
+
+
+def getCenterCurveByCone(
+    self: adsk.core.Cone,
+    face: adsk.fusion.BRepFace):
+
+    app: adsk.core.Application = adsk.core.Application.get()
+    measMgr: adsk.core.MeasureManager = app.measureManager
+
+    axis: adsk.core.Vector3D = face.geometry.axis
+    axis.normalize()
+    bBox: adsk.core.OrientedBoundingBox3D = measMgr.getOrientedBoundingBox(
+        face,
+        axis,
+        getPerpendicularVecter(axis)
+    )
+
+    vec1: adsk.core.Vector3D = axis.copy()
+    vec1.scaleBy(bBox.length * 0.5)
+    vec2: adsk.core.Vector3D = vec1.copy()
+    vec2.scaleBy(-1)
+
+    planes = []
+    for v in [vec1, vec2]:
+        p: adsk.core.Point3D = bBox.centerPoint.copy()
+        p.translateBy(v)
+        planes.append(
+            adsk.core.Plane.create(
+                p,
+                v
+            )
+        )
+
+    infiniteLine: adsk.core.InfiniteLine3D = adsk.core.InfiniteLine3D.create(
+        face.geometry.origin,
+        axis
+    )
+
+    points = [plane.intersectWithLine(infiniteLine) for plane in planes]
+
+    line: adsk.core.Line3D = adsk.core.Line3D.create(
+        points[0],
+        points[1],
+    )
+
+    return {
+        'obj': line,
+        'length': points[0].distanceTo(points[1]),
+    }
 
 
 adsk.core.Cylinder.getCenterEntity = getCenterCurveByCone
@@ -236,7 +270,7 @@ class CenterlineMeasurementFactry:
 
     @staticmethod
     def drawCG(
-        faces: list) -> adsk.fusion.Sketch:
+        faces: list) -> adsk.fusion.CustomGraphicsGroup:
 
         infos = getCenterEntities(faces)
         crvs = [info['obj'] for info in infos if hasattr(info['obj'], 'draw')]
@@ -256,6 +290,9 @@ class CenterlineMeasurementFactry:
             cgCrv: adsk.fusion.CustomGraphicsCurve = cgGroup.addCurve(crv)
             cgCrv.weight = 3
             cgCrv.color = CG_COLOR
+
+        return cgGroup
+
 
 def getAllCenterCurves(
     faces: list) -> list:
