@@ -169,11 +169,11 @@ def command_created(args: adsk.core.CommandCreatedEventArgs):
         local_handlers=local_handlers
     )
 
-    futil.add_handler(
-        cmd.preSelect,
-        command_preSelect,
-        local_handlers=local_handlers
-    )
+    # futil.add_handler(
+    #     cmd.preSelect,
+    #     command_preSelect,
+    #     local_handlers=local_handlers
+    # )
 
 
 def command_destroy(args: adsk.core.CommandEventArgs):

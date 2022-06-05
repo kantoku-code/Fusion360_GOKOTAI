@@ -2,8 +2,18 @@
 
 import adsk.core
 import adsk.fusion
-import itertools
 import math
+import sys
+import pathlib
+
+# parent_dir = pathlib.Path(__file__).resolve().parent
+# target_dir = parent_dir / 'Modules'
+# sys.path.append(str(target_dir))
+# from geomdl import fitting
+from ...lib.geomdl import fitting
+
+# del sys.path[-1]
+
 
 CG_COLOR: adsk.fusion.CustomGraphicsSolidColorEffect = adsk.fusion.CustomGraphicsSolidColorEffect.create(
     adsk.core.Color.create(128,255,0,255)
@@ -69,6 +79,20 @@ def drawArc(
         self.endPoint
     )
 
+
+def drawNurbs(
+    self: adsk.core.NurbsCurve3D,
+    skt: adsk.fusion.Sketch) -> None:
+
+    eva: adsk.core.CurveEvaluator3D = self.evaluator
+    _, sPrm, ePrm = eva.getParameterExtents()
+    _, mPoint = eva.getPointAtParameter((sPrm + ePrm) * 0.5)
+
+    skt.sketchCurves.sketchFittedSplines.addByNurbsCurve(
+        self
+    )
+
+
 def getCenters(
     face: adsk.fusion.BRepFace):
 
@@ -107,6 +131,7 @@ def getCenters(
         centers.append(pnt)
 
     return centers
+
 
 def getCenterCurveByTorus(
     self,
@@ -236,13 +261,87 @@ def getCenterCurveByCone(
     }
 
 
+def isPipeByNurbs(
+    face: adsk.fusion.BRepFace) -> bool:
+
+    surfEva: adsk.core.SurfaceEvaluator = face.evaluator
+    if surfEva.isClosedInU and not surfEva.isClosedInV:
+        return True
+    else:
+        return False
+
+
+def getCenterCurveByNurbs(
+    self: adsk.core.NurbsSurface,
+    face: adsk.fusion.BRepFace) -> adsk.core.NurbsCurve3D:
+
+    if not isPipeByNurbs(face):
+        return
+
+    surfEva: adsk.core.SurfaceEvaluator = face.evaluator
+    _, refPrm = surfEva.getParameterAtPoint(
+        face.pointOnFace
+    )
+
+    isoCrvLst = surfEva.getIsoCurve(refPrm.y, False)
+
+    isoCrv: adsk.core.NurbsCurve3D = isoCrvLst[0]
+
+    crvEva: adsk.core.CurveEvaluator3D = isoCrv.evaluator
+    _, sPrm, ePrm = crvEva.getParameterExtents()
+    _, points = crvEva.getStrokes(sPrm, ePrm, 0.01)
+
+    _, prms = surfEva.getParametersAtPoints(points)
+
+    _, _, crvTures, _ = surfEva.getCurvatures(prms)
+
+    _, normals = surfEva.getNormalsAtParameters(prms)
+    radius = [1/c for c in crvTures]
+    [n.scaleBy(r) for n, r in zip(normals, radius)]
+
+    [p.translateBy(v) for p, v in zip(points, normals)]
+
+    nurbs: adsk.core.NurbsCurve3D = getNurbsCurve(points)
+
+    nurbsEva: adsk.core.CurveEvaluator3D = nurbs.evaluator
+    _, sPrm, ePrm = nurbsEva.getParameterExtents()
+    _, length = nurbsEva.getLengthAtParameter(sPrm, ePrm)
+
+    return  {
+        'obj': nurbs,
+        'length': length
+    }
+
+
+def getNurbsCurve(
+    points: list) -> adsk.core.NurbsCurve3D:
+
+    ary = [(p.x, p.y, p.z) for p in points]
+
+    crv = fitting.interpolate_curve(ary, 3)
+
+    pnt3D: adsk.core.Point3D = adsk.core.Point3D
+    controlPoints = [pnt3D.create(c[0], c[1], c[2]) for c in crv.ctrlpts]
+    degree = crv.degree
+    knots = crv.knotvector
+    isPeriodic = crv.rational
+
+    return adsk.core.NurbsCurve3D.createNonRational(
+        controlPoints,
+        degree,
+        knots, 
+        isPeriodic
+    )
+
 adsk.core.Cylinder.getCenterEntity = getCenterCurveByCone
 adsk.core.Cone.getCenterEntity = getCenterCurveByCone
 adsk.core.Torus.getCenterEntity = getCenterCurveByTorus
+adsk.core.NurbsSurface.getCenterEntity = getCenterCurveByNurbs
 
 adsk.core.Line3D.draw = drawLine
 adsk.core.Arc3D.draw = drawArc
 adsk.core.Circle3D.draw = drawCircle
+adsk.core.NurbsCurve3D.draw = drawNurbs
 
 
 class CenterlineMeasurementFactry:
@@ -250,11 +349,18 @@ class CenterlineMeasurementFactry:
     @staticmethod
     def hasCenterCurve(
         face: adsk.fusion.BRepFace) -> bool:
-
-        if not hasattr(face.geometry, 'getCenterEntity'):
+        
+        geo = face.geometry
+        if not hasattr(geo, 'getCenterEntity'):
             return False
 
-        res = face.geometry.getCenterEntity(face)
+        if geo.classType() == adsk.core.NurbsCurve3D.classType():
+            if isPipeByNurbs(face):
+                return True
+            else:
+                return False
+
+        res = geo.getCenterEntity(face)
 
         if not res:
             return False
@@ -294,6 +400,7 @@ class CenterlineMeasurementFactry:
         )
 
         skt.isComputeDeferred = True
+        skt.arePointsShown = False
         [crv.draw(skt) for crv in crvs]
         skt.isComputeDeferred = False
 

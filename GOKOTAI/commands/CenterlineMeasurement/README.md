@@ -15,7 +15,6 @@
 ![Alt text](./resources_readme/dialog.png)
 
 - 面：該当の面を選択してください。
-  - 選択可能な面の形状は、"シリンダー" "コーン" "トーラス" のみです。
   ![Alt text](./resources_readme/surface.png)
 
 
