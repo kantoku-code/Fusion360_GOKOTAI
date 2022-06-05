@@ -15,6 +15,7 @@
 ![Alt text](./resources_readme/dialog.png)
 
 - 面：該当の面を選択してください。
+
   ![Alt text](./resources_readme/surface.png)
 
 
