@@ -6,13 +6,11 @@ import math
 import sys
 import pathlib
 
-# parent_dir = pathlib.Path(__file__).resolve().parent
-# target_dir = parent_dir / 'Modules'
-# sys.path.append(str(target_dir))
-# from geomdl import fitting
-from ...lib.geomdl import fitting
-
-# del sys.path[-1]
+parent_dir = pathlib.Path(__file__).resolve().parent.parent.parent
+target_dir = parent_dir / 'lib'
+sys.path.append(str(target_dir))
+from geomdl import fitting
+del sys.path[-1]
 
 
 CG_COLOR: adsk.fusion.CustomGraphicsSolidColorEffect = adsk.fusion.CustomGraphicsSolidColorEffect.create(

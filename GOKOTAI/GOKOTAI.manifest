@@ -6,7 +6,7 @@
 	"description":	{
 		"":	"Short Knife"
 	},
-	"version":	"0.0.14",
+	"version":	"0.0.15",
 	"runOnStartup":	false,
 	"supportedOS":	"windows|mac",
 	"editEnabled":	true
