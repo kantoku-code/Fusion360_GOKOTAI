@@ -82,10 +82,6 @@ def drawNurbs(
     self: adsk.core.NurbsCurve3D,
     skt: adsk.fusion.Sketch) -> None:
 
-    eva: adsk.core.CurveEvaluator3D = self.evaluator
-    _, sPrm, ePrm = eva.getParameterExtents()
-    _, mPoint = eva.getPointAtParameter((sPrm + ePrm) * 0.5)
-
     skt.sketchCurves.sketchFittedSplines.addByNurbsCurve(
         self
     )
@@ -314,22 +310,33 @@ def getCenterCurveByNurbs(
 def getNurbsCurve(
     points: list) -> adsk.core.NurbsCurve3D:
 
-    ary = [(p.x, p.y, p.z) for p in points]
+    if len(points) < 3:
+        line: adsk.core.Line3D = adsk.core.Line3D.create(
+            points[0],
+            points[1]
+        )
+        return line
 
-    crv = fitting.interpolate_curve(ary, 3)
+    try:
+        ary = [(p.x, p.y, p.z) for p in points]
 
-    pnt3D: adsk.core.Point3D = adsk.core.Point3D
-    controlPoints = [pnt3D.create(c[0], c[1], c[2]) for c in crv.ctrlpts]
-    degree = crv.degree
-    knots = crv.knotvector
-    isPeriodic = crv.rational
+        crv = fitting.interpolate_curve(ary, 3)
 
-    return adsk.core.NurbsCurve3D.createNonRational(
-        controlPoints,
-        degree,
-        knots, 
-        isPeriodic
-    )
+        pnt3D: adsk.core.Point3D = adsk.core.Point3D
+        controlPoints = [pnt3D.create(c[0], c[1], c[2]) for c in crv.ctrlpts]
+        degree = crv.degree
+        knots = crv.knotvector
+        isPeriodic = crv.rational
+
+        return adsk.core.NurbsCurve3D.createNonRational(
+            controlPoints,
+            degree,
+            knots, 
+            isPeriodic
+        )
+    except:
+        pass
+
 
 adsk.core.Cylinder.getCenterEntity = getCenterCurveByCone
 adsk.core.Cone.getCenterEntity = getCenterCurveByCone
