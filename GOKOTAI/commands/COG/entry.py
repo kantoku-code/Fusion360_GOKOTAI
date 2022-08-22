@@ -99,10 +99,10 @@ def command_created(args: adsk.core.CommandCreatedEventArgs):
     _bodyIpt = inputs.addSelectionInput(
         'bodyIptId',
         'ボディ',
-        'ボディを選択してください',
+        'ソリッドボディを選択してください',
     )
     _bodyIpt.addSelectionFilter(
-        adsk.core.SelectionCommandInput.Bodies
+        adsk.core.SelectionCommandInput.SolidBodies
     )
 
     futil.add_handler(args.command.execute, command_execute, local_handlers=local_handlers)
