@@ -22,6 +22,7 @@
 + [連結線](./GOKOTAI/commands/JointCurve/) : 指定したスケッチの連続した線を、一本の曲線に連結し新たなスケッチを作成します。
 + [メテオ](./GOKOTAI/commands/Meteor/) : 指定したボディにZの上方向から大量の点を降り注ぎます。
 + [中心線長さ](./GOKOTAI/commands/CenterlineMeasurement/) : 選択されたパイプ形状の合計長さ測定します。
++ [ボディの重心点](./GOKOTAI/commands/COG/) : 指定したボディの重心点を作成します。
 
 ---
 

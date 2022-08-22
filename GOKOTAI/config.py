@@ -41,6 +41,10 @@ modify_panel_name = '修正'
 modify_panel_id = f'{ADDIN_NAME}_modify_panel'
 modify_panel_after = ''
 
+construction_panel_name = '構築'
+construction_panel_id = f'{ADDIN_NAME}_construction_panel'
+construction_panel_after = ''
+
 inspect_panel_name = '検査'
 inspect_panel_id = f'{ADDIN_NAME}_Inspect_panel'
 inspect_panel_after = ''
