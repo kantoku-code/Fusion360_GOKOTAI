@@ -6,6 +6,14 @@ from ... import config
 app = adsk.core.Application.get()
 ui = app.userInterface
 
+# *************************
+# 重心点の球体作成のデフォルトをチェック入れたい場合は、False->Trueに変更
+_sphereSw_Default: bool = False
+
+# 重心点の球体の直径-単位はCmです
+SPHERE_SIZE = 0.01
+# *************************
+
 
 # TODO *** Specify the command identity information. ***
 CMD_ID = f'{config.COMPANY_NAME}_{config.ADDIN_NAME}_cog'
@@ -37,6 +45,8 @@ ICON_FOLDER = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'resource
 local_handlers = []
 
 _bodyIpt: adsk.core.SelectionCommandInput = None
+_sphereSw: adsk.core.BoolValueCommandInput = None
+
 
 # Executed when add-in is run.
 def start():
@@ -105,6 +115,15 @@ def command_created(args: adsk.core.CommandCreatedEventArgs):
         adsk.core.SelectionCommandInput.SolidBodies
     )
 
+    global _sphereSw, _sphereSw_Default
+    _sphereSw = inputs.addBoolValueInput(
+        'sphereSwId',
+        '重心点に球体作成',
+        True,
+        '',
+        _sphereSw_Default
+    )
+
     futil.add_handler(args.command.execute, command_execute, local_handlers=local_handlers)
     futil.add_handler(args.command.executePreview, command_preview, local_handlers=local_handlers)
     futil.add_handler(args.command.destroy, command_destroy, local_handlers=local_handlers)
@@ -115,7 +134,12 @@ def command_execute(args: adsk.core.CommandEventArgs):
     global _bodyIpt
     body: adsk.fusion.BRepBody = _bodyIpt.selection(0).entity
 
-    initCOG(body)
+    global _sphereSw, SPHERE_SIZE
+    radius = -1
+    if _sphereSw.value:
+        radius = SPHERE_SIZE * 0.5
+
+    initCOG(body, radius)
 
 
 def command_preview(args: adsk.core.CommandEventArgs):
@@ -136,7 +160,17 @@ def command_destroy(args: adsk.core.CommandEventArgs):
 
 
 def initCOG(
-    body: adsk.fusion.BRepBody):
+    body: adsk.fusion.BRepBody,
+    radius: float = -1.0):
+
+    cog: adsk.core.Point3D = body.physicalProperties.centerOfMass
+    sphere: adsk.fusion.BRepBody = None
+    if radius > 0:
+        tmpMgr: adsk.fusion.TemporaryBRepManager = adsk.fusion.TemporaryBRepManager.get()
+        sphere = tmpMgr.createSphere(
+            cog,
+            radius
+        )
 
     comp: adsk.fusion.Component = body.parentComponent
     constPnts: adsk.fusion.ConstructionPoints = comp.constructionPoints
@@ -151,18 +185,27 @@ def initCOG(
     if des.designType == adsk.fusion.DesignTypes.ParametricDesignType:
         baseFeat = comp.features.baseFeatures.add()
 
+    bodies: adsk.fusion.BRepBodies = comp.bRepBodies
+    cog_sphere: adsk.fusion.BRepBody = None
+    cog_name = f'COG_{body.name}'
     if baseFeat:
         baseFeat.startEdit()
         try:
             constPnt: adsk.fusion.ConstructionPoint = constPnts.add(pntIpt)
-            constPnt.name = f'COG_{body.name}'
+            constPnt.name = cog_name
+            if sphere:
+                cog_sphere = bodies.add(sphere, baseFeat)
+                cog_sphere.name = cog_name
         except:
             pass
         finally:
             baseFeat.finishEdit()
     else:
         constPnt: adsk.fusion.ConstructionPoint = constPnts.add(pntIpt)
-        constPnt.name = f'COG_{body.name}'
+        constPnt.name = cog_name
+        if sphere:
+            cog_sphere = bodies.add(sphere)
+            cog_sphere.name = cog_name
 
 
 def initCOG_CG(
