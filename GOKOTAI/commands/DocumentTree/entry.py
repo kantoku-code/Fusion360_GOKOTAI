@@ -206,9 +206,9 @@ def palette_incoming(html_args: adsk.core.HTMLEventArgs):
         if not datafile:
             return
 
-        if datafile.fileExtension == 'f2d':
-            futil.ui.messageBox('f2dファイルのオープンは中止しています')
-            return
+        # if datafile.fileExtension == 'f2d':
+        #     futil.ui.messageBox('f2dファイルのオープンは中止しています')
+        #     return
 
         execOpenDataFiles([datafile])
 
