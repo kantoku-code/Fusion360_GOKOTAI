@@ -23,6 +23,7 @@
 + [メテオ](./GOKOTAI/commands/Meteor/) : 指定したボディにZの上方向から大量の点を降り注ぎます。
 + [中心線長さ](./GOKOTAI/commands/CenterlineMeasurement/) : 選択されたパイプ形状の合計長さ測定します。
 + [ボディの重心点](./GOKOTAI/commands/COG/) : 指定したボディの重心点を作成します。
++ [カラフルワイヤーフレーム](./GOKOTAI/commands/ColorfulWireFrame/) :　色付きのワイヤーフレーム表示を行います。
 
 ---
 
