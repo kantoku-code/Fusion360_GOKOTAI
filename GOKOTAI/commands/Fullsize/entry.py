@@ -3,19 +3,19 @@ import adsk.fusion
 import os
 from ...lib import fusion360utils as futil
 from ... import config
-from .ColorfulWireFrameFactry import ColorfulWireFrameFactry as fact
+from tkinter import *
 
 app = adsk.core.Application.get()
 ui = app.userInterface
 
 
 # TODO *** コマンドのID情報を指定します。 ***
-CMD_ID = f'{config.COMPANY_NAME}_{config.ADDIN_NAME}_ColorfulWireFrame'
-CMD_NAME = 'カラフルワイヤーフレーム'
-CMD_Description = 'ボディ毎にカラフルなワイヤーフレーム表示'
+CMD_ID = f'{config.COMPANY_NAME}_{config.ADDIN_NAME}_Fullsize'
+CMD_NAME = '原寸大'
+CMD_Description = '原寸大表示にします'
 
 # パネルにコマンドを昇格させることを指定します。
-IS_PROMOTED = False
+IS_PROMOTED = True
 
 # TODO *** コマンドボタンが作成される場所を定義します。 ***
 # これは、ワークスペース、タブ、パネル、および 
@@ -46,12 +46,6 @@ ICON_FOLDER = os.path.join(
 # それらは解放されず、ガベージコレクションされません。
 local_handlers = []
 
-# **** 設定 ****
-_backUpVisualStyle = None
-_fact: 'fact' = None
-_dmyIpt: adsk.core.SelectionCommandInput = None
-_txtIpt: adsk.core.TextBoxCommandInput = None
-_targetBody: adsk.fusion.BRepBody = None
 
 # アドイン実行時に実行されます。
 def start():
@@ -114,31 +108,6 @@ def command_created(args: adsk.core.CommandCreatedEventArgs):
     cmd.isPositionDependent = True
     cmd.isOKButtonVisible = False
 
-    global _fact
-    _fact = fact()
-
-    # **inputs**
-    inputs: adsk.core.CommandInputs = cmd.commandInputs
-
-    global _dmyIpt
-    _dmyIpt = inputs.addSelectionInput(
-        'dmyIptId',
-        'dmy',
-        ''
-    )
-    _dmyIpt.addSelectionFilter(adsk.core.SelectionCommandInput.Edges)
-    _dmyIpt.setSelectionLimits(0)
-    _dmyIpt.isVisible = False
-
-    global _txtIpt
-    _txtIpt = inputs.addTextBoxCommandInput(
-        'txtTptId',
-        'ボディ',
-        '',
-        2,
-        True
-    )
-
     futil.add_handler(
         cmd.destroy,
         command_destroy,
@@ -146,24 +115,31 @@ def command_created(args: adsk.core.CommandCreatedEventArgs):
     )
 
     futil.add_handler(
-        cmd.executePreview,
-        command_executePreview,
+        cmd.activate,
+        command_activate,
         local_handlers=local_handlers
     )
 
     futil.add_handler(
-        cmd.preSelectMouseMove,
-        command_preSelect,
+        cmd.execute,
+        command_execute,
         local_handlers=local_handlers
     )
 
-    futil.add_handler(
-        cmd.preSelectEnd,
-        command_preSelectEnd,
-        local_handlers=local_handlers
-    )
 
-    futil.app.activeViewport.visualStyle = adsk.core.VisualStyles.WireframeVisualStyle
+def command_execute(args: adsk.core.CommandEventArgs):
+    futil.log(f'{CMD_NAME}:{args.firingEvent.name}')
+
+    execFullSize()
+
+
+def command_activate(args: adsk.core.CommandEventArgs):
+    futil.log(f'{CMD_NAME}:{args.firingEvent.name}')
+
+    if isOrthographicCameraType():
+        args.command.doExecute(False)
+    else:
+        futil.ui.messageBox('カメラを正投影に切り替えてください')
 
 
 def command_destroy(args: adsk.core.CommandEventArgs):
@@ -176,57 +152,64 @@ def command_destroy(args: adsk.core.CommandEventArgs):
     local_handlers = []
 
 
-def command_executePreview(args: adsk.core.CommandEventArgs):
-    futil.log(f'{CMD_NAME}:{args.firingEvent.name}')
+def isOrthographicCameraType():
+    app: adsk.core.Application = adsk.core.Application.get()
 
-    global _fact
-    _fact.drawCG()
-    # global _targetBody
-    # global _fact
-    # if _targetBody:
-    #     _fact.drawCGBody(_targetBody)
-    # global _fact
-    # _fact.drawTest()
+    vp: adsk.core.Viewport = app.activeViewport
 
-def command_preSelectEnd(args: adsk.core.SelectionEventArgs):
-    futil.log(f'{CMD_NAME}:{args.firingEvent.name}')
-
-    global _dmyIpt
-    _dmyIpt.commandPrompt = ''
-
-    global _txtIpt
-    _txtIpt.text = ''
-
-    global _targetBody
-    _targetBody = None
+    cam: adsk.core.Camera = vp.camera
+    return cam.cameraType == adsk.core.CameraTypes.OrthographicCameraType
 
 
-def command_preSelect(args: adsk.core.SelectionEventArgs):
-    futil.log(f'{CMD_NAME}:{args.firingEvent.name}')
+def execFullSize():
+    validation_Length = 254
+    app: adsk.core.Application = adsk.core.Application.get()
+    ui: adsk.core.UserInterface = app.userInterface
+    vp: adsk.core.Viewport = app.activeViewport
 
-    entity = args.selection.entity
+    def get_dpi() -> float:
+        screen = Tk()
+        return screen.winfo_fpixels('1i')
 
-    info = getEdgeInfo(entity)
+    def getViewLength() -> float:
+        cam: adsk.core.Camera = vp.camera
 
-    global _dmyIpt
-    _dmyIpt.commandPrompt = info
+        screenVec: adsk.core.Vector3D = cam.eye.vectorTo(cam.target)
+        vec: adsk.core.Vector3D = screenVec.crossProduct(cam.upVector)
+        vec.normalize()
+        vec.scaleBy(validation_Length * 0.1)
 
-    global _txtIpt
-    _txtIpt.text = info
+        pnt: adsk.core.Point3D = cam.target
+        pnt.translateBy(vec)
 
-    global _targetBody
-    _targetBody = entity
+        p1: adsk.core.Point2D = vp.modelToViewSpace(cam.target)
+        p2: adsk.core.Point2D = vp.modelToViewSpace(pnt)
 
-    args.isSelectable = False
+        return p1.distanceTo(p2)
 
+    def dumpmsg(s):
+        adsk.core.Application.get().log(s)
+        print(s)
 
-def getEdgeInfo(edge: adsk.fusion.BRepEdge) -> str:
-    body: adsk.fusion.BRepBody = edge.body
-    occ: adsk.fusion.Occurrence = body.assemblyContext
+    try:
+        pixel2millimeter = 25.4 / get_dpi()
+        dumpmsg(f'DPI {get_dpi()}')
 
-    if occ:
-        occ_comp_name = occ.name
-    else:
-        occ_comp_name = body.parentComponent.name
+        dist = getViewLength()
+        dumpmsg(f'ViewSpace Dist {dist}-{dist * pixel2millimeter}')
 
-    return f'{occ_comp_name}\n{body.name}'
+        viewLength = dist * pixel2millimeter
+        ratio = (viewLength / validation_Length) ** 2
+
+        cam = vp.camera
+        cam.viewExtents = cam.viewExtents * ratio
+        vp.camera = cam
+        vp.refresh()
+
+        dist = getViewLength()
+        dumpmsg(f'ViewSpace Dist {dist}-{dist * pixel2millimeter}')
+        dumpmsg('**')
+
+    except:
+        if ui:
+            ui.messageBox('Failed:\n{}'.format(traceback.format_exc()))

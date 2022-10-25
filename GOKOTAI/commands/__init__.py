@@ -12,6 +12,7 @@ from .JointCurve import entry as jointCurve
 from .CenterlineMeasurement import entry as centerlineMeasurement
 from .ColorfulWireFrame import entry as colorfulWireFrame
 from .COG import entry as cog
+from .Fullsize import entry as fullsize
 # from .ThreadSwitch import entry as threadSwitch
 
 # TODO インポートしたモジュールをこのリストに追加してください。
@@ -27,6 +28,7 @@ commands = [
     cog,
     centerlineMeasurement,
     colorfulWireFrame,
+    fullsize,
 ]
 
 
