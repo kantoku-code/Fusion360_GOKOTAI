@@ -3,17 +3,16 @@ import adsk.fusion
 import os
 from ...lib import fusion360utils as futil
 from ... import config
-from .CenterlineMeasurementFactry import CenterlineMeasurementFactry as fact
-
+from .ColorfulWireFrameFactry import ColorfulWireFrameFactry as fact
 
 app = adsk.core.Application.get()
 ui = app.userInterface
 
 
 # TODO *** コマンドのID情報を指定します。 ***
-CMD_ID = f'{config.COMPANY_NAME}_{config.ADDIN_NAME}_CenterlineMeasurement'
-CMD_NAME = '中心線長さ'
-CMD_Description = '選択されたパイプ形状の合計長さ測定'
+CMD_ID = f'{config.COMPANY_NAME}_{config.ADDIN_NAME}_ColorfulWireFrame'
+CMD_NAME = 'カラフルワイヤーフレーム'
+CMD_Description = 'ボディ毎にカラフルなワイヤーフレーム表示'
 
 # パネルにコマンドを昇格させることを指定します。
 IS_PROMOTED = True
@@ -48,13 +47,11 @@ ICON_FOLDER = os.path.join(
 local_handlers = []
 
 # **** 設定 ****
-_surfIpt: adsk.core.SelectionCommandInput = None
-
+_backUpVisualStyle = None
+_fact: 'fact' = None
+_dmyIpt: adsk.core.SelectionCommandInput = None
 _txtIpt: adsk.core.TextBoxCommandInput = None
-
-_sktIpt: adsk.core.BoolValueCommandInput = None
-_sktValue: bool = False
-
+_targetBody: adsk.fusion.BRepBody = None
 
 # アドイン実行時に実行されます。
 def start():
@@ -110,39 +107,36 @@ def stop():
 def command_created(args: adsk.core.CommandCreatedEventArgs):
     futil.log(f'{CMD_NAME}:{args.firingEvent.name}')
 
+    global _backUpVisualStyle
+    _backUpVisualStyle = futil.app.activeViewport.visualStyle
+
     cmd: adsk.core.Command = adsk.core.Command.cast(args.command)
     cmd.isPositionDependent = True
+    cmd.isOKButtonVisible = False
+
+    global _fact
+    _fact = fact()
 
     # **inputs**
     inputs: adsk.core.CommandInputs = cmd.commandInputs
 
-    unitMgr: adsk.fusion.FusionUnitsManager = futil.app.activeProduct.unitsManager
-
-    global _surfIpt
-    _surfIpt = inputs.addSelectionInput(
-        'surfIptId',
-        '面',
-        unitMgr.formatInternalValue(0)
+    global _dmyIpt
+    _dmyIpt = inputs.addSelectionInput(
+        'dmyIptId',
+        'dmy',
+        ''
     )
-    _surfIpt.addSelectionFilter(adsk.core.SelectionCommandInput.Faces)
-    _surfIpt.setSelectionLimits(0)
+    _dmyIpt.addSelectionFilter(adsk.core.SelectionCommandInput.Edges)
+    _dmyIpt.setSelectionLimits(0)
+    _dmyIpt.isVisible = False
 
     global _txtIpt
     _txtIpt = inputs.addTextBoxCommandInput(
         'txtTptId',
-        '合計長さ',
-        unitMgr.formatInternalValue(0),
-        1,
-        True
-    )
-
-    global _sktIpt, _sktValue
-    _sktIpt = inputs.addBoolValueInput(
-        'sktIptId',
-        '結果をスケッチで作成',
-        True,
+        'ボディ',
         '',
-        _sktValue
+        2,
+        True
     )
 
     futil.add_handler(
@@ -158,26 +152,25 @@ def command_created(args: adsk.core.CommandCreatedEventArgs):
     )
 
     futil.add_handler(
-        cmd.inputChanged,
-        command_inputChanged,
-        local_handlers=local_handlers
-    )
-
-    futil.add_handler(
-        cmd.execute,
-        command_execute,
-        local_handlers=local_handlers
-    )
-
-    futil.add_handler(
-        cmd.preSelect,
+        cmd.preSelectMouseMove,
         command_preSelect,
         local_handlers=local_handlers
     )
 
+    futil.add_handler(
+        cmd.preSelectEnd,
+        command_preSelectEnd,
+        local_handlers=local_handlers
+    )
+
+    futil.app.activeViewport.visualStyle = adsk.core.VisualStyles.WireframeVisualStyle
+
 
 def command_destroy(args: adsk.core.CommandEventArgs):
     futil.log(f'{CMD_NAME}:{args.firingEvent.name}')
+
+    global _backUpVisualStyle
+    futil.app.activeViewport.visualStyle = _backUpVisualStyle
 
     global local_handlers
     local_handlers = []
@@ -186,41 +179,54 @@ def command_destroy(args: adsk.core.CommandEventArgs):
 def command_executePreview(args: adsk.core.CommandEventArgs):
     futil.log(f'{CMD_NAME}:{args.firingEvent.name}')
 
-    fact.drawCG(getSelectAllFaces())
+    global _fact
+    _fact.drawCG()
+    # global _targetBody
+    # global _fact
+    # if _targetBody:
+    #     _fact.drawCGBody(_targetBody)
+    # global _fact
+    # _fact.drawTest()
 
-
-def command_inputChanged(args: adsk.core.InputChangedEventArgs):
+def command_preSelectEnd(args: adsk.core.SelectionEventArgs):
     futil.log(f'{CMD_NAME}:{args.firingEvent.name}')
 
-    length = fact.getAllLength(getSelectAllFaces())
+    global _dmyIpt
+    _dmyIpt.commandPrompt = ''
 
-    unitMgr: adsk.fusion.FusionUnitsManager = futil.app.activeProduct.unitsManager
-    msg = unitMgr.formatInternalValue(length)
+    global _txtIpt
+    _txtIpt.text = ''
 
-    global _txtIpt, _surfIpt
-    _txtIpt.text = msg
-    _surfIpt.commandPrompt = '合計:' + msg
-
-
-def command_execute(args: adsk.core.CommandEventArgs):
-    futil.log(f'{CMD_NAME}:{args.firingEvent.name}')
-
-    global _sktIpt, _sktValue
-    _sktValue = _sktIpt.value
-
-    if not _sktValue:
-        return
-
-    fact.drawSketch(getSelectAllFaces())
+    global _targetBody
+    _targetBody = None
 
 
 def command_preSelect(args: adsk.core.SelectionEventArgs):
     futil.log(f'{CMD_NAME}:{args.firingEvent.name}')
 
-    if not fact.hasCenterCurve(args.selection.entity):
-        args.isSelectable = False
+    entity = args.selection.entity
+
+    info = getEdgeInfo(entity)
+
+    global _dmyIpt
+    _dmyIpt.commandPrompt = info
+
+    global _txtIpt
+    _txtIpt.text = info
+
+    global _targetBody
+    _targetBody = entity
+
+    args.isSelectable = False
 
 
-def getSelectAllFaces():
-    global _surfIpt
-    return [_surfIpt.selection(idx).entity for idx in range(_surfIpt.selectionCount)]
+def getEdgeInfo(edge: adsk.fusion.BRepEdge) -> str:
+    body: adsk.fusion.BRepBody = edge.body
+    occ: adsk.fusion.Occurrence = body.assemblyContext
+
+    if occ:
+        occ_comp_name = occ.name
+    else:
+        occ_comp_name = body.parentComponent.name
+
+    return f'{occ_comp_name}\n{body.name}'

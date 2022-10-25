@@ -10,6 +10,7 @@ from .Meteor import entry as meteor
 from .DocumentTree import entry as documentTree
 from .JointCurve import entry as jointCurve
 from .CenterlineMeasurement import entry as centerlineMeasurement
+from .ColorfulWireFrame import entry as colorfulWireFrame
 from .COG import entry as cog
 # from .ThreadSwitch import entry as threadSwitch
 
@@ -25,6 +26,7 @@ commands = [
     # threadSwitch,
     cog,
     centerlineMeasurement,
+    colorfulWireFrame,
 ]
 
 
