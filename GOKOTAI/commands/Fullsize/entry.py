@@ -1,3 +1,4 @@
+import traceback
 import adsk.core
 import adsk.fusion
 import os
@@ -182,8 +183,11 @@ def execFullSize():
         pnt: adsk.core.Point3D = cam.target
         pnt.translateBy(vec)
 
-        p1: adsk.core.Point2D = vp.modelToViewSpace(cam.target)
-        p2: adsk.core.Point2D = vp.modelToViewSpace(pnt)
+        # p1: adsk.core.Point2D = vp.modelToViewSpace(cam.target)
+        # p2: adsk.core.Point2D = vp.modelToViewSpace(pnt)
+
+        p1: adsk.core.Point2D = vp.viewToScreen(vp.modelToViewSpace(cam.target))
+        p2: adsk.core.Point2D = vp.viewToScreen(vp.modelToViewSpace(pnt))
 
         return p1.distanceTo(p2)
 
