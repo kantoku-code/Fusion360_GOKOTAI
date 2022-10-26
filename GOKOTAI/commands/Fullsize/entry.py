@@ -9,6 +9,7 @@ from tkinter import *
 app = adsk.core.Application.get()
 ui = app.userInterface
 
+DEBUG = True
 
 # TODO *** コマンドのID情報を指定します。 ***
 CMD_ID = f'{config.COMPANY_NAME}_{config.ADDIN_NAME}_Fullsize'
@@ -183,24 +184,29 @@ def execFullSize():
         pnt: adsk.core.Point3D = cam.target
         pnt.translateBy(vec)
 
-        # p1: adsk.core.Point2D = vp.modelToViewSpace(cam.target)
-        # p2: adsk.core.Point2D = vp.modelToViewSpace(pnt)
+        # old
+        p1: adsk.core.Point2D = vp.modelToViewSpace(cam.target)
+        p2: adsk.core.Point2D = vp.modelToViewSpace(pnt)
+        dumpmsg(f'modelToViewSpace distance:{p1.distanceTo(p2)}')
 
+        # new
         p1: adsk.core.Point2D = vp.viewToScreen(vp.modelToViewSpace(cam.target))
         p2: adsk.core.Point2D = vp.viewToScreen(vp.modelToViewSpace(pnt))
+        dumpmsg(f'viewToScreen distance:{p1.distanceTo(p2)}')
 
         return p1.distanceTo(p2)
 
     def dumpmsg(s):
-        adsk.core.Application.get().log(s)
-        print(s)
+        if DEBUG:
+            adsk.core.Application.get().log(s)
+            print(s)
 
     try:
         pixel2millimeter = 25.4 / get_dpi()
         dumpmsg(f'DPI {get_dpi()}')
 
         dist = getViewLength()
-        dumpmsg(f'ViewSpace Dist {dist}-{dist * pixel2millimeter}')
+        dumpmsg(f'Before ViewLength {dist}-{dist * pixel2millimeter}')
 
         viewLength = dist * pixel2millimeter
         ratio = (viewLength / validation_Length) ** 2
@@ -211,7 +217,7 @@ def execFullSize():
         vp.refresh()
 
         dist = getViewLength()
-        dumpmsg(f'ViewSpace Dist {dist}-{dist * pixel2millimeter}')
+        dumpmsg(f'After ViewLength {dist}-{dist * pixel2millimeter}')
         dumpmsg('**')
 
     except:
