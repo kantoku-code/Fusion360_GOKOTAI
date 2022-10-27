@@ -5,6 +5,7 @@ import os
 from ...lib import fusion360utils as futil
 from ... import config
 from tkinter import *
+import math
 
 app = adsk.core.Application.get()
 ui = app.userInterface
@@ -184,15 +185,9 @@ def execFullSize():
         pnt: adsk.core.Point3D = cam.target
         pnt.translateBy(vec)
 
-        # old
         p1: adsk.core.Point2D = vp.modelToViewSpace(cam.target)
         p2: adsk.core.Point2D = vp.modelToViewSpace(pnt)
         dumpmsg(f'modelToViewSpace distance:{p1.distanceTo(p2)}')
-
-        # new
-        p1: adsk.core.Point2D = vp.viewToScreen(vp.modelToViewSpace(cam.target))
-        p2: adsk.core.Point2D = vp.viewToScreen(vp.modelToViewSpace(pnt))
-        dumpmsg(f'viewToScreen distance:{p1.distanceTo(p2)}')
 
         return p1.distanceTo(p2)
 
@@ -209,10 +204,13 @@ def execFullSize():
         dumpmsg(f'Before ViewLength {dist}-{dist * pixel2millimeter}')
 
         viewLength = dist * pixel2millimeter
-        ratio = (viewLength / validation_Length) ** 2
+        ratio = 1 / (validation_Length / viewLength)
 
-        cam = vp.camera
-        cam.viewExtents = cam.viewExtents * ratio
+        cam: adsk.core.Camera = vp.camera
+        viewExtents = cam.viewExtents
+        radius = math.sqrt(viewExtents / math.pi) * ratio
+
+        cam.viewExtents = math.pi * (radius ** 2)
         vp.camera = cam
         vp.refresh()
 
