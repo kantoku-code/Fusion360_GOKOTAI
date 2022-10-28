@@ -1,9 +1,10 @@
+import traceback
 import adsk.core
 import adsk.fusion
 import os
 from ...lib import fusion360utils as futil
 from ... import config
-from tkinter import *
+from .FullsizeFactory import FullsizeFactry
 
 app = adsk.core.Application.get()
 ui = app.userInterface
@@ -45,6 +46,10 @@ ICON_FOLDER = os.path.join(
 # イベントハンドラのローカルリストで、参照を維持するために使用されます。
 # それらは解放されず、ガベージコレクションされません。
 local_handlers = []
+
+
+# ************
+_fact: 'FullsizeFactry' = None
 
 _messageIpt: adsk.core.TextBoxCommandInput = None
 _correctionIpt: adsk.core.TextBoxCommandInput = None
@@ -132,40 +137,50 @@ def command_created(args: adsk.core.CommandCreatedEventArgs):
     # inputs
     inputs: adsk.core.CommandInputs = cmd.commandInputs
 
-    global _messageIpt
-    _messageIpt = inputs.addTextBoxCommandInput(
-        'messageIptId',
-        '情報',
-        '',
-        1,
-        True
-    )
+    global _fact
+    _fact = FullsizeFactry()
+
+    correctionTxt = _fact.getCorrectionTxt()
 
     global _correctionIpt
     _correctionIpt = inputs.addTextBoxCommandInput(
         'correctionIptId',
         '補正',
-        '*1',
+        correctionTxt,
         1,
         False
     )
 
+    global _messageIpt
+    _messageIpt = inputs.addTextBoxCommandInput(
+        'messageIptId',
+        '情報',
+        '',
+        2,
+        True
+    )
+
+
 def command_executePreview(args: adsk.core.CommandEventArgs):
     futil.log(f'{CMD_NAME}:{args.firingEvent.name}')
 
-    global _correctionIpt
-    value = getReflectsCorrectionValues(1, _correctionIpt.text)
-    if value is None:
-        futil.log(f'{CMD_NAME}:correctionIpt errer')
-        return
+    try:
+        global _correctionIpt
+        correctionTxt = _correctionIpt.text
 
-    execFullSize()
+        global _messageIpt
+        _messageIpt.text = ''
 
+        global _fact
+        msg = _fact.isCorrectionOk(correctionTxt)
+        if len(msg) > 0:
+            _messageIpt.text = msg
+            return
 
-# def command_execute(args: adsk.core.CommandEventArgs):
-#     futil.log(f'{CMD_NAME}:{args.firingEvent.name}')
+        _fact.execFullSize(correctionTxt)
 
-#     execFullSize()
+    except:
+        pass
 
 
 def command_activate(args: adsk.core.CommandEventArgs):
@@ -201,57 +216,3 @@ def getReflectsCorrectionValues(value, correction):
         return eval(f'{value}{correction}')
     except:
         return None
-
-
-def execFullSize():
-    validation_Length = 254
-    app: adsk.core.Application = adsk.core.Application.get()
-    ui: adsk.core.UserInterface = app.userInterface
-    vp: adsk.core.Viewport = app.activeViewport
-
-    def get_dpi() -> float:
-        screen = Tk()
-        return screen.winfo_fpixels('1i')
-
-    def getViewLength() -> float:
-        cam: adsk.core.Camera = vp.camera
-
-        screenVec: adsk.core.Vector3D = cam.eye.vectorTo(cam.target)
-        vec: adsk.core.Vector3D = screenVec.crossProduct(cam.upVector)
-        vec.normalize()
-        vec.scaleBy(validation_Length * 0.1)
-
-        pnt: adsk.core.Point3D = cam.target
-        pnt.translateBy(vec)
-
-        p1: adsk.core.Point2D = vp.modelToViewSpace(cam.target)
-        p2: adsk.core.Point2D = vp.modelToViewSpace(pnt)
-
-        return p1.distanceTo(p2)
-
-    def dumpmsg(s):
-        adsk.core.Application.get().log(s)
-        print(s)
-
-    try:
-        pixel2millimeter = 25.4 / get_dpi()
-        dumpmsg(f'DPI {get_dpi()}')
-
-        dist = getViewLength()
-        dumpmsg(f'ViewSpace Dist {dist}-{dist * pixel2millimeter}')
-
-        viewLength = dist * pixel2millimeter
-        ratio = (viewLength / validation_Length) ** 2
-
-        cam = vp.camera
-        cam.viewExtents = cam.viewExtents * ratio
-        vp.camera = cam
-        vp.refresh()
-
-        dist = getViewLength()
-        dumpmsg(f'ViewSpace Dist {dist}-{dist * pixel2millimeter}')
-        dumpmsg('**')
-
-    except:
-        if ui:
-            ui.messageBox('Failed:\n{}'.format(traceback.format_exc()))
