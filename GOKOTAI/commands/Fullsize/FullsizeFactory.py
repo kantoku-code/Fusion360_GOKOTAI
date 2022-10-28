@@ -5,12 +5,11 @@ from tkinter import *
 import pathlib
 import json
 
-DEBUG = True
 THIS_DIR = pathlib.Path(__file__).resolve().parent
 CORRECTION_PATH = THIS_DIR / 'correction.json'
 CORRECTION_KEY = 'correction_value'
 
-DEBUG = True
+DEBUG = False
 
 class FullsizeFactry():
     def __init__(self) -> None:
