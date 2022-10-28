@@ -46,6 +46,9 @@ ICON_FOLDER = os.path.join(
 # それらは解放されず、ガベージコレクションされません。
 local_handlers = []
 
+_messageIpt: adsk.core.TextBoxCommandInput = None
+_correctionIpt: adsk.core.TextBoxCommandInput = None
+
 
 # アドイン実行時に実行されます。
 def start():
@@ -121,16 +124,48 @@ def command_created(args: adsk.core.CommandCreatedEventArgs):
     )
 
     futil.add_handler(
-        cmd.execute,
-        command_execute,
+        cmd.executePreview,
+        command_executePreview,
         local_handlers=local_handlers
     )
 
+    # inputs
+    inputs: adsk.core.CommandInputs = cmd.commandInputs
 
-def command_execute(args: adsk.core.CommandEventArgs):
+    global _messageIpt
+    _messageIpt = inputs.addTextBoxCommandInput(
+        'messageIptId',
+        '情報',
+        '',
+        1,
+        True
+    )
+
+    global _correctionIpt
+    _correctionIpt = inputs.addTextBoxCommandInput(
+        'correctionIptId',
+        '補正',
+        '*1',
+        1,
+        False
+    )
+
+def command_executePreview(args: adsk.core.CommandEventArgs):
     futil.log(f'{CMD_NAME}:{args.firingEvent.name}')
 
+    global _correctionIpt
+    value = getReflectsCorrectionValues(1, _correctionIpt.text)
+    if value is None:
+        futil.log(f'{CMD_NAME}:correctionIpt errer')
+        return
+
     execFullSize()
+
+
+# def command_execute(args: adsk.core.CommandEventArgs):
+#     futil.log(f'{CMD_NAME}:{args.firingEvent.name}')
+
+#     execFullSize()
 
 
 def command_activate(args: adsk.core.CommandEventArgs):
@@ -159,6 +194,13 @@ def isOrthographicCameraType():
 
     cam: adsk.core.Camera = vp.camera
     return cam.cameraType == adsk.core.CameraTypes.OrthographicCameraType
+
+
+def getReflectsCorrectionValues(value, correction):
+    try:
+        return eval(f'{value}{correction}')
+    except:
+        return None
 
 
 def execFullSize():
