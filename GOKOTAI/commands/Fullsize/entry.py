@@ -5,6 +5,7 @@ import os
 from ...lib import fusion360utils as futil
 from ... import config
 from .FullsizeFactory import FullsizeFactry
+import threading
 
 app = adsk.core.Application.get()
 ui = app.userInterface
@@ -50,9 +51,10 @@ local_handlers = []
 
 # ************
 _fact: 'FullsizeFactry' = None
-
-_messageIpt: adsk.core.TextBoxCommandInput = None
-_correctionIpt: adsk.core.TextBoxCommandInput = None
+# スレッド停止用
+_stopFlag = None
+EVENT_TIMER = 0.1
+_eventCoordination = False
 
 
 # アドイン実行時に実行されます。
@@ -160,9 +162,18 @@ def command_created(args: adsk.core.CommandCreatedEventArgs):
         True
     )
 
+    global _stopFlag
+    _stopFlag = threading.Event()
+    myThread = MyThread(_stopFlag, EVENT_TIMER)
+    myThread.start()
+
 
 def command_executePreview(args: adsk.core.CommandEventArgs):
     futil.log(f'{CMD_NAME}:{args.firingEvent.name}')
+
+    global _eventCoordination
+    if _eventCoordination:
+        return
 
     try:
         global _correctionIpt
@@ -195,8 +206,11 @@ def command_activate(args: adsk.core.CommandEventArgs):
 def command_destroy(args: adsk.core.CommandEventArgs):
     futil.log(f'{CMD_NAME}:{args.firingEvent.name}')
 
-    global _backUpVisualStyle
-    futil.app.activeViewport.visualStyle = _backUpVisualStyle
+    try:
+        global _stopFlag
+        _stopFlag.set()
+    except:
+        pass
 
     global local_handlers
     local_handlers = []
@@ -216,3 +230,15 @@ def getReflectsCorrectionValues(value, correction):
         return eval(f'{value}{correction}')
     except:
         return None
+
+
+class MyThread(threading.Thread):
+    def __init__(self, event, timer):
+        threading.Thread.__init__(self)
+        self.stopped = event
+        self.timer = timer
+    def run(self):
+        while not self.stopped.wait(self.timer):
+            global _eventCoordination
+            _eventCoordination = False
+            futil.log('-----Thread-----')
