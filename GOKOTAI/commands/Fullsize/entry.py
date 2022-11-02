@@ -5,16 +5,32 @@ import os
 from ...lib import fusion360utils as futil
 from ... import config
 from .FullsizeFactory import FullsizeFactry
-import threading
+import pathlib
+import json
 
 app = adsk.core.Application.get()
 ui = app.userInterface
 
+THIS_DIR = pathlib.Path(__file__).resolve().parent
 
 # TODO *** コマンドのID情報を指定します。 ***
 CMD_ID = f'{config.COMPANY_NAME}_{config.ADDIN_NAME}_Fullsize'
 CMD_NAME = '原寸大'
 CMD_Description = '原寸大表示にします'
+PALETTE_NAME = "原寸大"
+
+# Using "global" variables by referencing values from /config.py
+PALETTE_ID = config.fullsize_palette_id
+
+# Specify the full path to the local html. You can also use a web URL
+# such as 'https://www.autodesk.com/'
+PALETTE_URL = str(THIS_DIR / 'index.html')
+
+# The path function builds a valid OS path. This fixes it to be a valid local URL.
+PALETTE_URL = PALETTE_URL.replace('\\', '/')
+
+# Set a default docking behavior for the palette
+PALETTE_DOCKING = adsk.core.PaletteDockingStates.PaletteDockStateFloating
 
 # パネルにコマンドを昇格させることを指定します。
 IS_PROMOTED = True
@@ -50,195 +66,245 @@ local_handlers = []
 
 
 # ************
+DEBUG_LANG_MODE = False
+
 _fact: 'FullsizeFactry' = None
-# スレッド停止用
-_stopFlag = None
-EVENT_TIMER = 0.1
-_eventCoordination = False
+# _correctionIpt: adsk.core.TextBoxCommandInput = None
+# _messageIpt: adsk.core.TextBoxCommandInput = None
+# _lockIpt: adsk.core.BoolValueCommandInput = None
+
+# THIS_DIR = pathlib.Path(__file__).resolve().parent
+# BUTTONSETTING = str(THIS_DIR / 'resources' / 'json' / 'button_setting.json')
+
+# PALETTE_ID = config.fullsize_palette_id
+
+PRODUCT_TYPE_WHITE_LIST = (
+    'DesignProductType'
+)
+
+PALETTE_WIDTH = 260
+PALETTE_HEIGHT_NORMAL = 240
+# PALETTE_HEIGHT_OPTION = 340
 
 
-# アドイン実行時に実行されます。
+# ********
+
+# Executed when add-in is run.
 def start():
-    # コマンドの定義を作成する。
-    cmd_def = ui.commandDefinitions.addButtonDefinition(
-        CMD_ID,
-        CMD_NAME,
-        CMD_Description,
-        ICON_FOLDER
-    )
+    global ui
+    # Create a command Definition.
+    cmd_def = ui.commandDefinitions.addButtonDefinition(CMD_ID, CMD_NAME, CMD_Description, ICON_FOLDER)
 
-    # コマンド作成イベントのイベントハンドラを定義します。
-    # このハンドラは、ボタンがクリックされたときに呼び出されます。
+    # Add command created handler. The function passed here will be executed when the command is executed.
     futil.add_handler(cmd_def.commandCreated, command_created)
 
-    # ******** ユーザーがコマンドを実行できるように、UIにボタンを追加します。 ********
-    # ボタンが作成される対象のワークスペースを取得します。
+    # ******** Add a button into the UI so the user can run the command. ********
+    # Get the target workspace the button will be created in.
     workspace = ui.workspaces.itemById(WORKSPACE_ID)
 
-    toolbar_tab = workspace.toolbarTabs.itemById(TAB_ID)
-    if toolbar_tab is None:
-        toolbar_tab = workspace.toolbarTabs.add(TAB_ID, TAB_NAME)
-
-    # ボタンが作成されるパネルを取得します。
+    # Get the panel the button will be created in.
     panel = workspace.toolbarPanels.itemById(PANEL_ID)
-    if panel is None:
-        panel = toolbar_tab.toolbarPanels.add(PANEL_ID, PANEL_NAME, PANEL_AFTER, False)
 
-    # 指定された既存のコマンドの後に、UI のボタンコマンド制御を作成します。
+    # Create the button command control in the UI after the specified existing command.
     control = panel.controls.addCommand(cmd_def, COMMAND_BESIDE_ID, False)
 
-    # コマンドをメインツールバーに昇格させるかどうかを指定します。
+    # Specify if the command is promoted to the main toolbar. 
     control.isPromoted = IS_PROMOTED
 
 
-# アドイン停止時に実行されます。
+# Executed when add-in is stopped.
 def stop():
-    # このコマンドのさまざまなUI要素を取得する
+    # Get the various UI elements for this command
     workspace = ui.workspaces.itemById(WORKSPACE_ID)
     panel = workspace.toolbarPanels.itemById(PANEL_ID)
     command_control = panel.controls.itemById(CMD_ID)
     command_definition = ui.commandDefinitions.itemById(CMD_ID)
+    palette = ui.palettes.itemById(PALETTE_ID)
 
-    # ボタンコマンドの制御を削除する。
+    # Delete the button command control
     if command_control:
         command_control.deleteMe()
 
-    # コマンドの定義を削除します。
+    # Delete the command definition
     if command_definition:
         command_definition.deleteMe()
 
+    # Delete the Palette
+    if palette:
+        palette.deleteMe()
 
+
+# Event handler that is called when the user clicks the command button in the UI.
+# To have a dialog, you create the desired command inputs here. If you don't need
+# a dialog, don't create any inputs and the execute event will be immediately fired.
+# You also need to connect to any command related events here.
 def command_created(args: adsk.core.CommandCreatedEventArgs):
-    futil.log(f'{CMD_NAME}:{args.firingEvent.name}')
+    # General logging for debug.
+    futil.log(f'{CMD_NAME}: Command created event.')
 
-    global _backUpVisualStyle
-    _backUpVisualStyle = futil.app.activeViewport.visualStyle
+    # Create the event handlers you will need for this instance of the command
+    futil.add_handler(args.command.execute, command_execute, local_handlers=local_handlers)
+    futil.add_handler(args.command.destroy, command_destroy, local_handlers=local_handlers)
 
-    cmd: adsk.core.Command = adsk.core.Command.cast(args.command)
-    cmd.isPositionDependent = True
-    cmd.isOKButtonVisible = False
+    # onWorkspaceActivated = MyWorkspaceActivatedHandler()
+    # ui.workspaceActivated.add(onWorkspaceActivated)
+    # _handlers.append(onWorkspaceActivated)
 
-    futil.add_handler(
-        cmd.destroy,
-        command_destroy,
-        local_handlers=local_handlers
-    )
+# Because no command inputs are being added in the command created event, the execute
+# event is immediately fired.
+def command_execute(args: adsk.core.CommandEventArgs):
+    # General logging for debug.
+    futil.log(f'{CMD_NAME}: Command execute event.')
 
-    futil.add_handler(
-        cmd.activate,
-        command_activate,
-        local_handlers=local_handlers
-    )
+    createPalette()
 
-    futil.add_handler(
-        cmd.executePreview,
-        command_executePreview,
-        local_handlers=local_handlers
-    )
+# Use this to handle a user closing your palette.
+def palette_closed(args: adsk.core.UserInterfaceGeneralEventArgs):
+    # General logging for debug.
+    futil.log(f'{CMD_NAME}: Palette was closed.')
 
-    # inputs
-    inputs: adsk.core.CommandInputs = cmd.commandInputs
+    global _handlers
+    _handlers = []
 
-    global _fact
-    _fact = FullsizeFactry()
+# Use this to handle a user navigating to a new page in your palette.
+def palette_navigating(args: adsk.core.NavigationEventArgs):
+    # General logging for debug.
+    futil.log(f'{CMD_NAME}: Palette navigating event.')
 
-    correctionTxt = _fact.getCorrectionTxt()
+    # Get the URL the user is navigating to:
+    url = args.navigationURL
 
-    global _correctionIpt
-    _correctionIpt = inputs.addTextBoxCommandInput(
-        'correctionIptId',
-        '補正',
-        correctionTxt,
-        1,
-        False
-    )
+    log_msg = f"User is attempting to navigate to {url}\n"
+    futil.log(log_msg, adsk.core.LogLevels.InfoLogLevel)
 
-    global _messageIpt
-    _messageIpt = inputs.addTextBoxCommandInput(
-        'messageIptId',
-        '情報',
-        '',
-        2,
-        True
-    )
-
-    global _stopFlag
-    _stopFlag = threading.Event()
-    myThread = MyThread(_stopFlag, EVENT_TIMER)
-    myThread.start()
+    # Check if url is an external site and open in user's default browser.
+    if url.startswith("http"):
+        args.launchExternally = True
 
 
-def command_executePreview(args: adsk.core.CommandEventArgs):
-    futil.log(f'{CMD_NAME}:{args.firingEvent.name}')
+# Use this to handle events sent from javascript in your palette.
+def palette_incoming(html_args: adsk.core.HTMLEventArgs):
+    # General logging for debug.
+    futil.log(f'{CMD_NAME}: Palette incoming event.')
 
-    global _eventCoordination
-    if _eventCoordination:
-        return
+    message_data: dict = json.loads(html_args.data)
+    message_action = html_args.action
 
-    try:
-        global _correctionIpt
-        correctionTxt = _correctionIpt.text
+    log_msg = f"Event received from {html_args.firingEvent.sender.name}\n"
+    log_msg += f"Action: {message_action}\n"
+    log_msg += f"Data: {message_data}"
+    futil.log(log_msg, adsk.core.LogLevels.InfoLogLevel)
 
-        global _messageIpt
-        _messageIpt.text = ''
+    # TODO ******** Your palette reaction code here ********
 
-        global _fact
-        msg = _fact.isCorrectionOk(correctionTxt)
-        if len(msg) > 0:
-            _messageIpt.text = msg
-            return
+    if message_action == 'DOMContentLoaded':
+        global app
+        # ここでjsonLoad
+        lang = app.executeTextCommand(u'Options.GetUserLanguage')
+    #     with open(BUTTONSETTING, encoding='utf-8') as f:
+    #         button_Dict = json.loads(f.read())
 
-        _fact.execFullSize(correctionTxt)
+    #     if not lang in button_Dict:
+    #         lang = 'en-US'
 
-    except:
+    #     # **debug **
+    #     if DEBUG_LANG_MODE:
+    #         lang = DEBUG_LANG
+
+    #     # https://cortyuming.hateblo.jp/entry/20140920/p2
+    #     html_args.returnData = json.dumps(button_Dict[lang], ensure_ascii=False)
+    elif message_action == 'btn-click':
+        palettes = ui.palettes
+        palette: adsk.core.Palette = palettes.itemById(PALETTE_ID)
+        palette.name = PALETTE_NAME + ' - ' + message_data['value']
+
+    elif message_action == 'lock-change':
+        palettes = ui.palettes
+        palette: adsk.core.Palette = palettes.itemById(PALETTE_ID)
+        palette.name = PALETTE_NAME + ' - ' + f"{message_data['value']}"
+
+    elif message_action == 'correction-change':
+        palettes = ui.palettes
+        palette: adsk.core.Palette = palettes.itemById(PALETTE_ID)
+        palette.name = PALETTE_NAME + ' - ' + message_data['value']
+
+
+
+    # elif message_action in DIR_MAP:
+        # setTreeFolderVisible(
+        #     DIR_MAP[message_action],
+        #     message_data['value'],
+        #     SCOPE_MAP[message_data['scope']],
+        #     )
+
+    # elif message_action == 'option':
+    #     global ui
+    #     palette: adsk.core.Palette = ui.palettes.itemById(PALETTE_ID)
+    #     palette.height = PALETTE_HEIGHT_OPTION if message_data['value'] else PALETTE_HEIGHT_NORMAL
+    #     if not message_data['value']:
+    #         palette.width = PALETTE_WIDTH
+
+    elif message_action == 'response':
         pass
 
-
-def command_activate(args: adsk.core.CommandEventArgs):
-    futil.log(f'{CMD_NAME}:{args.firingEvent.name}')
-
-    if isOrthographicCameraType():
-        args.command.doExecute(False)
-    else:
-        futil.ui.messageBox('カメラを正投影に切り替えてください')
-
-
+# This event handler is called when the command terminates.
 def command_destroy(args: adsk.core.CommandEventArgs):
-    futil.log(f'{CMD_NAME}:{args.firingEvent.name}')
-
-    try:
-        global _stopFlag
-        _stopFlag.set()
-    except:
-        pass
+    # General logging for debug.
+    futil.log(f'{CMD_NAME}: Command destroy event.')
 
     global local_handlers
     local_handlers = []
 
 
-def isOrthographicCameraType():
-    app: adsk.core.Application = adsk.core.Application.get()
+# *********
+def createPalette():
+    palettes = ui.palettes
+    palette = palettes.itemById(PALETTE_ID)
+    if palette is None:
+        palette = palettes.add(
+            id=PALETTE_ID,
+            name=PALETTE_NAME,
+            htmlFileURL=PALETTE_URL,
+            isVisible=True,
+            showCloseButton=True,
+            # isResizable=False,
+            isResizable=True,
+            width=PALETTE_WIDTH,
+            height=PALETTE_HEIGHT_NORMAL,
+            useNewWebBrowser=True
+        )
+        palette.setPosition(900,200)
+        futil.add_handler(palette.closed, palette_closed)
+        futil.add_handler(palette.navigatingURL, palette_navigating)
+        futil.add_handler(palette.incomingFromHTML, palette_incoming)
+        futil.log(f'{CMD_NAME}: Created a new palette: ID = {palette.id}, Name = {palette.name}')
 
-    vp: adsk.core.Viewport = app.activeViewport
+    if palette.dockingState == adsk.core.PaletteDockingStates.PaletteDockStateFloating:
+        palette.dockingState = PALETTE_DOCKING
 
-    cam: adsk.core.Camera = vp.camera
-    return cam.cameraType == adsk.core.CameraTypes.OrthographicCameraType
-
-
-def getReflectsCorrectionValues(value, correction):
-    try:
-        return eval(f'{value}{correction}')
-    except:
-        return None
+    palette.isVisible = True
 
 
-class MyThread(threading.Thread):
-    def __init__(self, event, timer):
-        threading.Thread.__init__(self)
-        self.stopped = event
-        self.timer = timer
-    def run(self):
-        while not self.stopped.wait(self.timer):
-            global _eventCoordination
-            _eventCoordination = False
-            futil.log('-----Thread-----')
+# class MyWorkspaceActivatedHandler(adsk.core.WorkspaceEventHandler):
+#     def __init__(self):
+#         super().__init__()
+#     def notify(self, args: adsk.core.WorkspaceEventArgs):
+#         futil.log(f'{CMD_NAME}: {args.firingEvent.name}')
+
+#         global ui
+#         palettes = ui.palettes
+#         palette = palettes.itemById(PALETTE_ID)
+
+#         if not palette:
+#             return
+
+#         if not args.workspace.productType in PRODUCT_TYPE_WHITE_LIST:
+#             palette.sendInfoToHTML(
+#                 'command_event',
+#                 json.dumps({'value': 'True'}) 
+#             )
+#         else:
+#             palette.sendInfoToHTML(
+#                 'command_event',
+#                 json.dumps({'value': 'False'}) 
+#             )

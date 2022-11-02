@@ -1,0 +1,28 @@
+/* コンテナ */
+#container {
+    display: grid;
+    /* grid-template-rows: 1fr 1fr 1fr 1fr; */
+    grid-template-rows: 40px 40px 40px 30px;
+    grid-template-columns: repeat(auto-fit, 1fr);
+    justify-content: center;
+    /* padding: 5px; */
+    grid-template-areas:
+    "areaA"
+    "areaB"
+    "areaC";
+}
+
+/* アイテム */
+#area-button {
+    grid-area: areaA;
+    padding: 1rem;
+    margin: 0 auto;
+}
+#area-lock {
+    grid-area: areaB;
+    padding: 1rem;
+    margin: 0 auto;
+}
+#area-setting {
+    grid-area: areaC;
+}

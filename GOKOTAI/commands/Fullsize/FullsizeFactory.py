@@ -4,6 +4,7 @@ import adsk.fusion
 from tkinter import *
 import pathlib
 import json
+import math
 
 THIS_DIR = pathlib.Path(__file__).resolve().parent
 CORRECTION_PATH = THIS_DIR / 'correction.json'
@@ -40,6 +41,7 @@ class FullsizeFactry():
 
         cam: adsk.core.Camera = self.vp.camera
         cam.viewExtents = viewExtents
+        # cam.viewExtents = viewExtents * 1 / math.sqrt((1 / (5 * math.pi)))
 
         self.vp.camera = cam
         self.vp.refresh()

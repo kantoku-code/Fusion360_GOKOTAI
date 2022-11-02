@@ -60,3 +60,5 @@ all_workspace_names = [
 
 # Palettes
 sample_palette_id = f'{COMPANY_NAME}_{ADDIN_NAME}_palette_id'
+
+fullsize_palette_id = f'{COMPANY_NAME}_{ADDIN_NAME}_fullsize_id'
