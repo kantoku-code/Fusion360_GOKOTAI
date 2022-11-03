@@ -17,13 +17,13 @@
         <a class="btn btn-border"><span>100%</span></a>
         <a class="btn btn-border"><span>×2</span></a>
       </div>
-      <div id="area-lock">
+      <!-- <div id="area-lock">
         <label
           ><input type="checkbox" id="lock" /><span class="check"
             >倍率ロック</span
           ></label
         >
-      </div>
+      </div> -->
       <div id="area-setting">
         <input
           type="text"
@@ -32,7 +32,9 @@
           autocomplete="off"
           id="correction"
         />
-        <!-- <div class="error-message">※ 入力必須です</div> -->
+        <div class="error-message">
+          <P id="error-msg"></P>
+        </div>
       </div>
     </div>
     <script src="index.js"></script>

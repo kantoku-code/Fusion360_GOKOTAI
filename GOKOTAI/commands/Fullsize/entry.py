@@ -66,25 +66,14 @@ local_handlers = []
 
 
 # ************
-DEBUG_LANG_MODE = False
-
 _fact: 'FullsizeFactry' = None
-# _correctionIpt: adsk.core.TextBoxCommandInput = None
-# _messageIpt: adsk.core.TextBoxCommandInput = None
-# _lockIpt: adsk.core.BoolValueCommandInput = None
+# _lock_mode = False
+# PRODUCT_TYPE_WHITE_LIST = (
+#     'DesignProductType'
+# )
 
-# THIS_DIR = pathlib.Path(__file__).resolve().parent
-# BUTTONSETTING = str(THIS_DIR / 'resources' / 'json' / 'button_setting.json')
-
-# PALETTE_ID = config.fullsize_palette_id
-
-PRODUCT_TYPE_WHITE_LIST = (
-    'DesignProductType'
-)
-
-PALETTE_WIDTH = 260
-PALETTE_HEIGHT_NORMAL = 240
-# PALETTE_HEIGHT_OPTION = 340
+PALETTE_WIDTH = 200
+PALETTE_HEIGHT_NORMAL = 200
 
 
 # ********
@@ -145,10 +134,31 @@ def command_created(args: adsk.core.CommandCreatedEventArgs):
     # Create the event handlers you will need for this instance of the command
     futil.add_handler(args.command.execute, command_execute, local_handlers=local_handlers)
     futil.add_handler(args.command.destroy, command_destroy, local_handlers=local_handlers)
+    # futil.add_handler(futil.app.cameraChanged, application_cameraChanged, local_handlers=local_handlers)
+
+    global _fact
+    _fact = FullsizeFactry()
+
+    if not isOrthographicCameraType():
+        futil.app.userInterface.messageBox(
+            'カメラを正投影に切り替えてください'
+        )
 
     # onWorkspaceActivated = MyWorkspaceActivatedHandler()
     # ui.workspaceActivated.add(onWorkspaceActivated)
     # _handlers.append(onWorkspaceActivated)
+
+# def application_cameraChanged(args: adsk.core.CameraEventArgs):
+#     # Code to react to the event.
+#     futil.log('In application_cameraChanged event handler.')
+
+#     global _lock_mode
+#     if not _lock_mode:
+#         return
+
+#     global _fact
+#     if _fact.getStateViewExtents() != args.viewport.camera.viewExtents:
+#         _fact.reDraw()
 
 # Because no command inputs are being added in the command created event, the execute
 # event is immediately fired.
@@ -158,6 +168,7 @@ def command_execute(args: adsk.core.CommandEventArgs):
 
     createPalette()
 
+
 # Use this to handle a user closing your palette.
 def palette_closed(args: adsk.core.UserInterfaceGeneralEventArgs):
     # General logging for debug.
@@ -165,6 +176,7 @@ def palette_closed(args: adsk.core.UserInterfaceGeneralEventArgs):
 
     global _handlers
     _handlers = []
+
 
 # Use this to handle a user navigating to a new page in your palette.
 def palette_navigating(args: adsk.core.NavigationEventArgs):
@@ -197,52 +209,55 @@ def palette_incoming(html_args: adsk.core.HTMLEventArgs):
 
     # TODO ******** Your palette reaction code here ********
 
+    palettes = ui.palettes
+    palette: adsk.core.Palette = palettes.itemById(PALETTE_ID)
+
+    global _fact
+
     if message_action == 'DOMContentLoaded':
-        global app
-        # ここでjsonLoad
-        lang = app.executeTextCommand(u'Options.GetUserLanguage')
-    #     with open(BUTTONSETTING, encoding='utf-8') as f:
-    #         button_Dict = json.loads(f.read())
+        html_args.returnData = json.dumps(
+            {
+                'correction': _fact.getCorrectionTxt()
+            }
+        )
 
-    #     if not lang in button_Dict:
-    #         lang = 'en-US'
-
-    #     # **debug **
-    #     if DEBUG_LANG_MODE:
-    #         lang = DEBUG_LANG
-
-    #     # https://cortyuming.hateblo.jp/entry/20140920/p2
-    #     html_args.returnData = json.dumps(button_Dict[lang], ensure_ascii=False)
     elif message_action == 'btn-click':
         palettes = ui.palettes
         palette: adsk.core.Palette = palettes.itemById(PALETTE_ID)
-        palette.name = PALETTE_NAME + ' - ' + message_data['value']
 
-    elif message_action == 'lock-change':
-        palettes = ui.palettes
-        palette: adsk.core.Palette = palettes.itemById(PALETTE_ID)
-        palette.name = PALETTE_NAME + ' - ' + f"{message_data['value']}"
+        scale = ''
+        if message_data['value'] == '100%':
+            scale = 0
+        elif message_data['value'] == '÷2':
+            scale = -1
+        elif message_data['value'] == '×2':
+            scale = 1
+
+        res = _fact.refresh(scale)
+        palette.name = PALETTE_NAME + ' ' + res
+
+    # elif message_action == 'lock-change':
+    #     palettes = ui.palettes
+    #     palette: adsk.core.Palette = palettes.itemById(PALETTE_ID)
+        
+    #     global _lock_mode
+    #     _lock_mode = message_data['value']
+        # a=1
 
     elif message_action == 'correction-change':
-        palettes = ui.palettes
-        palette: adsk.core.Palette = palettes.itemById(PALETTE_ID)
-        palette.name = PALETTE_NAME + ' - ' + message_data['value']
+        correctionTxt = message_data['value']
+        msg = _fact.isCorrectionOk(correctionTxt)
+        html_args.returnData = json.dumps(
+            {
+                'value': msg
+            }
+        )
+        if len(msg) > 0:
+            return
 
+        res =  _fact.setCorrectionTxt(correctionTxt)
+        palette.name = PALETTE_NAME + ' ' + res
 
-
-    # elif message_action in DIR_MAP:
-        # setTreeFolderVisible(
-        #     DIR_MAP[message_action],
-        #     message_data['value'],
-        #     SCOPE_MAP[message_data['scope']],
-        #     )
-
-    # elif message_action == 'option':
-    #     global ui
-    #     palette: adsk.core.Palette = ui.palettes.itemById(PALETTE_ID)
-    #     palette.height = PALETTE_HEIGHT_OPTION if message_data['value'] else PALETTE_HEIGHT_NORMAL
-    #     if not message_data['value']:
-    #         palette.width = PALETTE_WIDTH
 
     elif message_action == 'response':
         pass
@@ -267,8 +282,8 @@ def createPalette():
             htmlFileURL=PALETTE_URL,
             isVisible=True,
             showCloseButton=True,
-            # isResizable=False,
-            isResizable=True,
+            isResizable=False,
+            # isResizable=True,
             width=PALETTE_WIDTH,
             height=PALETTE_HEIGHT_NORMAL,
             useNewWebBrowser=True
@@ -284,6 +299,13 @@ def createPalette():
 
     palette.isVisible = True
 
+
+def isOrthographicCameraType():
+    app: adsk.core.Application = adsk.core.Application.get()
+    vp: adsk.core.Viewport = app.activeViewport
+    cam: adsk.core.Camera = vp.camera
+
+    return cam.cameraType == adsk.core.CameraTypes.OrthographicCameraType
 
 # class MyWorkspaceActivatedHandler(adsk.core.WorkspaceEventHandler):
 #     def __init__(self):

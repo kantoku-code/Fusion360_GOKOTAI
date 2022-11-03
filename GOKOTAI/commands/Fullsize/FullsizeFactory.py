@@ -19,41 +19,72 @@ class FullsizeFactry():
         self.app: adsk.core.Application = adsk.core.Application.get()
         self.ui: adsk.core.UserInterface = self.app.userInterface
         self.vp: adsk.core.Viewport = self.app.activeViewport
+        self.viewExtents = self._getViewExtents(self.getCorrectionTxt())
+        self.scaleCount = 0
+        self.scaleUnit = math.sqrt((1 / (5 * math.pi)))
 
 
     def isCorrectionOk(self, correctionTxt) -> str:
         if self._getReflectsCorrectionValues(1, correctionTxt) is None:
-            return '補正の式が不正です!'
+            return u'補正の式が不正です!'
 
         if not self._getViewExtents(correctionTxt) > 0:
-            return '補正の式の答えが0以上になるようにしてください!'
+            return u'補正の式の答えが0以上になるようにしてください!'
 
         return ''
 
 
-    def execFullSize(self, correctionTxt):
+    def getStateViewExtents(self) -> float:
+        cam: adsk.core.Camera = self.vp.camera
 
-        dumpmsg('**')
-        dist = self._getViewLength()
-        dumpmsg(f'Before Dist {dist}-{dist * 25.4 / self._get_dpi()}')
+        if self.scaleCount > 0:
+            res = self.viewExtents * 1 / 4**(self.scaleCount)
+        elif self.scaleCount < 0:
+            res = self.viewExtents * 4**(abs(self.scaleCount))
+        else:
+            res = self.viewExtents
 
-        viewExtents = self._getViewExtents(correctionTxt)
+        return res
+
+    def reDraw(self) -> str:
+        res = ''
+        if self.scaleCount > 0:
+            res = f'{100*(2**(self.scaleCount))}%'
+        elif self.scaleCount < 0:
+            res = f'{100/(2**(abs(self.scaleCount)))}%'
+        else:
+            res = '100%'
 
         cam: adsk.core.Camera = self.vp.camera
-        cam.viewExtents = viewExtents
-        # cam.viewExtents = viewExtents * 1 / math.sqrt((1 / (5 * math.pi)))
-
+        cam.viewExtents = self.getStateViewExtents()
         self.vp.camera = cam
         self.vp.refresh()
 
-        dist = self._getViewLength()
-        dumpmsg(f'After Dist {dist}-{dist * 25.4 / self._get_dpi()}')
+        return res
 
-        setCorrection(correctionTxt)
+
+    def refresh(self, scale) -> str:
+
+        if scale == 0:
+            self.scaleCount = 0
+        else:
+            self.scaleCount += scale
+
+        return self.reDraw()
 
 
     def getCorrectionTxt(self) -> str:
         return gatCorrection()
+
+
+    def setCorrectionTxt(self, correctionTxt) -> str:
+        if len(self.isCorrectionOk(correctionTxt)) > 0:
+            return
+
+        setCorrection(correctionTxt)
+        self.viewExtents = self._getViewExtents(correctionTxt)
+
+        return self.refresh(0)
 
 
     def _getViewExtents(self, correctionTxt):

@@ -75,20 +75,9 @@ a.btn-border:active:before {
 }
 
 /*  */
-.scale-text {
-	font-size:3em;
-	text-align:center;
-	line-height:0.95em;
-	font-weight:bold;
-  letter-spacing: 0.3em;
-	text-shadow: 
-		0.04em 0.02em 0 #B0BEC5, 
-		0.08em 0.05em 0 rgba(0, 0, 0, 0.6);
-}
-
-/*  */
 .textbox{
-  width: 1fr;
+  /* width: 1fr; */
+  width: 10em;
   border-radius: 6px;
   border-top: 1px solid #aaa;
   border-left: 1px solid #aaa;
@@ -97,16 +86,11 @@ a.btn-border:active:before {
   background-image: none;
   font-size: 16px;
 }
-/* 
+
 .error-message {
   font-size: 12px;
-  color: #ff7676;
-  display: none;
+  color: #ff3232;
 }
-
-input:invalid + .error-message  {
-  display: block;
-} */
 
 /*  */
 input[type="checkbox"]{

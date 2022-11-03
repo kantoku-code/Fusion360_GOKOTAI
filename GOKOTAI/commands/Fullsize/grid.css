@@ -1,8 +1,7 @@
 /* コンテナ */
 #container {
     display: grid;
-    /* grid-template-rows: 1fr 1fr 1fr 1fr; */
-    grid-template-rows: 40px 40px 40px 30px;
+    grid-template-rows: 40px 15px 40px;
     grid-template-columns: repeat(auto-fit, 1fr);
     justify-content: center;
     /* padding: 5px; */
