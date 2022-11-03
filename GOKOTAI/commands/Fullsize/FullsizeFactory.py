@@ -35,8 +35,7 @@ class FullsizeFactry():
 
 
     def getStateViewExtents(self) -> float:
-        cam: adsk.core.Camera = self.vp.camera
-
+        self.viewExtents = self._getViewExtents(self.getCorrectionTxt())
         if self.scaleCount > 0:
             res = self.viewExtents * 1 / 4**(self.scaleCount)
         elif self.scaleCount < 0:
