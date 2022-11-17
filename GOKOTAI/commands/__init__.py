@@ -13,6 +13,7 @@ from .CenterlineMeasurement import entry as centerlineMeasurement
 from .ColorfulWireFrame import entry as colorfulWireFrame
 from .COG import entry as cog
 from .Fullsize import entry as fullsize
+from .voxel import entry as voxel
 # from .ThreadSwitch import entry as threadSwitch
 
 # TODO インポートしたモジュールをこのリストに追加してください。
@@ -29,6 +30,7 @@ commands = [
     centerlineMeasurement,
     colorfulWireFrame,
     fullsize,
+    voxel,
 ]
 
 
