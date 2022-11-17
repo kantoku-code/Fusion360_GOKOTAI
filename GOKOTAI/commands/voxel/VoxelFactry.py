@@ -8,10 +8,9 @@ import pathlib
 THIS_DIR = pathlib.Path(__file__).resolve().parent
 SMT_DIR = THIS_DIR / 'temp'
 SMT_PATH = str(SMT_DIR / 'voxel.smt')
-# _temppath = r'C:\temp\temp.smt'
 
 INTERSECTION_BOOLEAN = adsk.fusion.BooleanTypes.IntersectionBooleanType
-# UNION_BOOLEAN = adsk.fusion.BooleanTypes.UnionBooleanType
+UNION_BOOLEAN = adsk.fusion.BooleanTypes.UnionBooleanType
 DIFFERENCE_BOOLEAN = adsk.fusion.BooleanTypes.DifferenceBooleanType
 
 class RelativeStatus(IntEnum):
@@ -19,7 +18,7 @@ class RelativeStatus(IntEnum):
     COLLISION = auto()
     UNRELATED = auto()
 
-DEBUG = True
+DEBUG = False
 
 
 def run(context):
@@ -29,21 +28,6 @@ def run(context):
         ui = app.userInterface
         des: adsk.fusion.Design = app.activeProduct
         root: adsk.fusion.Component = des.rootComponent
-
-        fact = VoxelFactry(
-            root.bRepBodies[0],
-            6
-        )
-        # oct = fact.test()
-        # a, b = fact.get_voxel_bodies()
-        # print(f'{len(a)} : {len(b)}')
-        fact.test()
-        iptMgr: adsk.core.ImportManager = app.importManager
-        smtOpt: adsk.core.SMTImportOptions = iptMgr.createSMTImportOptions(_temppath)
-        iptMgr.importToTarget2(smtOpt, root)
-
-        a=1
-
 
     except:
         if ui:
@@ -100,14 +84,13 @@ class VoxelFactry():
         stackBBoxes, includeBBoxes, unrelatedBBoxes = self._get_voxel_bodies()
         dump(f'{len(stackBBoxes)}:{len(includeBBoxes)}:{len(unrelatedBBoxes)}')
 
-
         if isInside:
             stackBBoxes.extend(includeBBoxes)
         else:
             unrelatedBBoxes.extend(includeBBoxes)
 
         if isCombin:
-            bodies = self._get_combine_body_list(unrelatedBBoxes)
+            bodies = self._get_combine_body_list(stackBBoxes)
         else:
             bodies = [self.tmpMgr.createBox(b) for b in stackBBoxes]
 
@@ -122,12 +105,28 @@ class VoxelFactry():
 
 
     def _get_combine_body_list(self, bBoxes: list) -> list:
-        bodies = [self.tmpMgr.createBox(b) for b in bBoxes]
-        targetBody: adsk.fusion.BRepBody = self.tmpMgr.createBox(self.base_BBox)
 
-        [self.tmpMgr.booleanOperation(targetBody, b, DIFFERENCE_BOOLEAN) for b in bodies]
-        
-        return [targetBody]
+        def tryUnion(target: adsk.fusion.BRepBody, tools: list):
+            ngLst = []
+            for tool in tools:
+                try:
+                    self.tmpMgr.booleanOperation(target, tool, UNION_BOOLEAN)
+                except:
+                    ngLst.append(tool)
+
+            return target, ngLst
+
+        bodies = [self.tmpMgr.createBox(b) for b in bBoxes]
+        targetBody: adsk.fusion.BRepBody = bodies.pop()
+
+        targetBody, ngLst = tryUnion(targetBody, bodies)
+        targetBody, ngLst = tryUnion(targetBody, ngLst)
+
+        res = [targetBody]
+        if len(ngLst) > 0:
+            res.extend(ngLst)
+
+        return res
 
 
     def _export_smt(self, bodies: list):
@@ -239,14 +238,17 @@ class VoxelFactry():
         body1: adsk.fusion.BRepBody,
         body2: adsk.fusion.BRepBody,) -> RelativeStatus:
 
-        volume = body1.volume
-        self.tmpMgr.booleanOperation(body1, body2, INTERSECTION_BOOLEAN)
+        try:
+            volume = body1.volume
+            self.tmpMgr.booleanOperation(body1, body2, INTERSECTION_BOOLEAN)
 
-        if body1.volume == 0:
-            return RelativeStatus.UNRELATED
-        elif body1.volume == volume:
-            return RelativeStatus.INCLUDE
-        else:
+            if body1.volume == 0:
+                return RelativeStatus.UNRELATED
+            elif body1.volume == volume:
+                return RelativeStatus.INCLUDE
+            else:
+                return RelativeStatus.COLLISION
+        except:
             return RelativeStatus.COLLISION
 
 

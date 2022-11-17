@@ -25,7 +25,7 @@
 + [ボディの重心点](./GOKOTAI/commands/COG/) : 指定したボディの重心点を作成します。
 + [カラフルワイヤーフレーム](./GOKOTAI/commands/ColorfulWireFrame/) :　色付きのワイヤーフレーム表示を行います。
 + [原寸大](./GOKOTAI/commands/Fullsize/) :　画面を原寸大のサイズになるようにズームします。(補正による調整が必要です)
-
++ [ボクセル](./GOKOTAI/commands/voxel/) :　指定したボディを元にボクセル化したボディを作成します。
 ---
 
 ## **ライセンス**:

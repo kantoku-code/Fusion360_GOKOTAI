@@ -13,7 +13,7 @@ ui = app.userInterface
 # TODO *** コマンドのID情報を指定します。 ***
 CMD_ID = f'{config.COMPANY_NAME}_{config.ADDIN_NAME}_voxel'
 CMD_NAME = 'ボクセル'
-CMD_Description = '指定したボディを元にボクセル化します。'
+CMD_Description = '指定したボディを元にボクセル化したボディを作成します。'
 
 # パネルにコマンドを昇格させることを指定します。
 IS_PROMOTED = True
@@ -120,9 +120,9 @@ def command_created(args: adsk.core.CommandCreatedEventArgs):
     _bodyIpt = inputs.addSelectionInput(
         'bodyIptId',
         'ボディ',
-        'ボディを選択'
+        'ソリッドボディを選択'
     )
-    _bodyIpt.addSelectionFilter('Bodies')
+    _bodyIpt.addSelectionFilter(adsk.core.SelectionCommandInput.SolidBodies)
 
     global _countIpt
     _countIpt = inputs.addIntegerSpinnerCommandInput(
@@ -160,7 +160,6 @@ def command_created(args: adsk.core.CommandCreatedEventArgs):
         '',
         False
     )
-
 
     # **event**
     futil.add_handler(
@@ -251,7 +250,6 @@ def command_inputChanged(args: adsk.core.InputChangedEventArgs):
         _fact.set_body(None)
 
     _fact.set_division_level(_countIpt.value)
-
 
     unitSize = _fact.get_unit_size()
 
