@@ -49,6 +49,9 @@ inspect_panel_name = '検査'
 inspect_panel_id = f'{ADDIN_NAME}_Inspect_panel'
 inspect_panel_after = ''
 
+io_panel_name = 'I/O'
+io_panel_id = f'{ADDIN_NAME}_IO_panel'
+io_panel_after = ''
 
 # Reference for use in some commands
 all_workspace_names = [
