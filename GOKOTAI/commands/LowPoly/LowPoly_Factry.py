@@ -23,10 +23,12 @@ class LowPoly_Factry():
 
         basePath = pathlib.Path(path)
         baseDir = basePath.parent
-        stem = re.sub(r'[\\|/|:|?|.|"|<|>|\|]', '-', basePath.stem)
+        stem = self._get_valid_name(basePath.stem)
         suffix = basePath.suffix
 
-        stlSourceList = self._get_mesh_datas(entities, tolerance, lengthRatio)
+        bodies = self._get_target_bodies(entities)
+        stlSourceList = [self._get_mesh_source(mesh_data, lengthRatio, body.name) 
+            for mesh_data, body in zip(self._get_mesh_datas(bodies, tolerance), bodies)]
 
         datas = []
         if isOneFile:
@@ -34,22 +36,61 @@ class LowPoly_Factry():
             datas.append((str(expPath), '\n'.join(stlSourceList)))
         else:
             for body, source in zip(bodies, stlSourceList):
-                bodyName = re.sub(r'[\\|/|:|?|.|"|<|>|\|]', '-', body.name)
+                bodyName = self._get_export_file_name(body)
                 expPath = baseDir / f'{stem}_{bodyName}{suffix}'
                 datas.append((str(expPath), source))
 
         [self._write_file(p, s) for p, s in datas]
 
 
+    def _get_export_file_name(
+        self,
+        body: adsk.fusion.BRepBody) -> str:
+
+        parent = None
+        if body.assemblyContext:
+            parent = body.assemblyContext
+        else:
+            parent = body.parentComponent
+
+        return self._get_valid_name(f'{parent.name}_{body.name}')
+
+
+    def _get_valid_name(
+        self,
+        txt) -> str:
+
+        return re.sub(r'[\\|/|:|?|.|"|<|>|\|]', '-', txt)
+
+
+    def _get_mesh_data(
+        self,
+        body: adsk.fusion.BRepBody,
+        tolerance: float) -> tuple:
+
+        meshCalc: adsk.fusion.TriangleMeshCalculator = body.meshManager.createMeshCalculator()
+        meshCalc.surfaceTolerance = tolerance
+        traMesh: adsk.fusion.TriangleMesh = meshCalc.calculate()
+
+        points = self._group_by_list(
+            traMesh.nodeCoordinates,
+            self._group_by_count(traMesh.nodeIndices, 3)
+        )
+        tmpNormals = self._group_by_list(
+            traMesh.normalVectors,
+            self._group_by_count(traMesh.nodeIndices, 3)
+        )
+        normals = [self._synthesize_vectors(vs) for vs in tmpNormals]
+
+        return (points, normals)
+
+
     def _get_mesh_datas(
         self,
-        entities: list,
-        tolerance: float,
-        lengthRatio: float) -> list:
+        bodies: list,
+        tolerance: float) -> list:
 
-        bodies = self._get_target_bodies(entities)
-
-        return [self._get_mesh_source(b, tolerance, lengthRatio, b.name) for b in bodies]
+        return [self._get_mesh_data(body, tolerance) for body in bodies]
 
 
     def _get_target_bodies(
@@ -123,25 +164,25 @@ class LowPoly_Factry():
 
     def _get_mesh_source(
         self,
-        body: adsk.fusion.BRepBody,
-        Tolerance: float,
+        mesh_data: tuple,
         lengthRatio: float,
         name: str) -> str:
 
-        meshCalc: adsk.fusion.TriangleMeshCalculator = body.meshManager.createMeshCalculator()
-        meshCalc.surfaceTolerance = Tolerance
-        traMesh: adsk.fusion.TriangleMesh = meshCalc.calculate()
+        # meshCalc: adsk.fusion.TriangleMeshCalculator = body.meshManager.createMeshCalculator()
+        # meshCalc.surfaceTolerance = Tolerance
+        # traMesh: adsk.fusion.TriangleMesh = meshCalc.calculate()
 
-        points = self._group_by_list(
-            traMesh.nodeCoordinates,
-            self._group_by_count(traMesh.nodeIndices, 3)
-        )
-        tmpNormals = self._group_by_list(
-            traMesh.normalVectors,
-            self._group_by_count(traMesh.nodeIndices, 3)
-        )
-        normals = [self._synthesize_vectors(vs) for vs in tmpNormals]
+        # points = self._group_by_list(
+        #     traMesh.nodeCoordinates,
+        #     self._group_by_count(traMesh.nodeIndices, 3)
+        # )
+        # tmpNormals = self._group_by_list(
+        #     traMesh.normalVectors,
+        #     self._group_by_count(traMesh.nodeIndices, 3)
+        # )
+        # normals = [self._synthesize_vectors(vs) for vs in tmpNormals]
 
+        points, normals = mesh_data
         return self._initStlSource(points, normals, lengthRatio, name)
 
 

@@ -260,6 +260,7 @@ def getExportPath() -> str:
     dlg.title = 'export'
     dlg.isMultiSelectEnabled = False
     dlg.filter = 'STLファイル(*.stl)'
+    dlg.initialFilename = futil.app.activeDocument.name
 
     if dlg.showSave() != adsk.core.DialogResults.DialogOK:
         return ''
