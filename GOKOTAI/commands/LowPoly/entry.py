@@ -143,6 +143,8 @@ def command_created(args: adsk.core.CommandCreatedEventArgs):
     )
     _bodyIpt.setSelectionLimits(0)
     _bodyIpt.addSelectionFilter(adsk.core.SelectionCommandInput.Bodies)
+    _bodyIpt.addSelectionFilter(adsk.core.SelectionCommandInput.Occurrences)
+    _bodyIpt.addSelectionFilter(adsk.core.SelectionCommandInput.RootComponents)
 
     global _unitIpt, _unit
     _unitIpt = inputs.addDropDownCommandInput(

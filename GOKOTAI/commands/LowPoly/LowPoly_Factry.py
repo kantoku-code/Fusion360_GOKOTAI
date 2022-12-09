@@ -15,20 +15,18 @@ class LowPoly_Factry():
 
     def export_meshes(
         self,
-        bodies: list,
-        Tolerance: float,
+        entities: list,
+        tolerance: float,
         lengthRatio: float,
         path: str,
         isOneFile: bool) -> None:
-
-        # *******
 
         basePath = pathlib.Path(path)
         baseDir = basePath.parent
         stem = re.sub(r'[\\|/|:|?|.|"|<|>|\|]', '-', basePath.stem)
         suffix = basePath.suffix
 
-        stlSourceList = [self._get_mesh_data(b, Tolerance, lengthRatio, b.name) for b in bodies]
+        stlSourceList = self._get_mesh_datas(entities, tolerance, lengthRatio)
 
         datas = []
         if isOneFile:
@@ -43,6 +41,77 @@ class LowPoly_Factry():
         [self._write_file(p, s) for p, s in datas]
 
 
+    def _get_mesh_datas(
+        self,
+        entities: list,
+        tolerance: float,
+        lengthRatio: float) -> list:
+
+        bodies = self._get_target_bodies(entities)
+
+        return [self._get_mesh_source(b, tolerance, lengthRatio, b.name) for b in bodies]
+
+
+    def _get_target_bodies(
+        self,
+        entities: list) -> list:
+
+        # ******
+        def is_Belonging(
+            names: list,
+            name: str) -> bool:
+
+            return any([n in name for n in names])
+
+        def remove_duplicates(
+            lst: list) -> list:
+
+            bodiesDict: dict = {}
+            [bodiesDict.setdefault(body.entityToken, body) for body in lst]
+
+            return list(bodiesDict.values())
+
+        def get_all_show_body() -> list:
+            self.app.activeProduct.rootComponent
+            return root.findBRepUsingPoint(
+                adsk.core.Point3D.create(0,0,0),
+                adsk.fusion.BRepEntityTypes.BRepBodyEntityType,
+                100000000000000,
+                True
+            )
+    
+        # *******
+        comp_occ_types = [
+            adsk.fusion.Component.classType,
+            adsk.fusion.Occurrence.classType
+        ]
+
+        tmpBodies = []
+        comp_occ_list = []
+        for entity in entities:
+            if entity.classType in comp_occ_types:
+                comp_occ_list.append(entity)
+            elif entity.isVisible:
+                tmpBodies.append(entity)
+
+        comp_occ_names = [co.name for co in comp_occ_list]
+
+        root: adsk.fusion.Component = self.app.activeProduct.rootComponent
+        allBodies: adsk.core.ObjectCollection = get_all_show_body()
+
+        for body in allBodies:
+            parent_fullpath = None
+            if body.assemblyContext:
+                parent_fullpath = f'{root.name}+{body.assemblyContext.fullPathName}'
+            else:
+                parent_fullpath = body.parentComponent.name
+
+            if is_Belonging(comp_occ_names, parent_fullpath):
+                tmpBodies.append(body)
+
+        return remove_duplicates(tmpBodies)
+
+
     def _write_file(
         self,
         path: str,
@@ -52,7 +121,7 @@ class LowPoly_Factry():
             f.write(txt)
 
 
-    def _get_mesh_data(
+    def _get_mesh_source(
         self,
         body: adsk.fusion.BRepBody,
         Tolerance: float,
