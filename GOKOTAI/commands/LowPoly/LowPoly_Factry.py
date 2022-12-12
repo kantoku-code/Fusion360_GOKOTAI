@@ -3,6 +3,7 @@ import adsk.fusion
 import adsk.core
 import pathlib
 import re
+from itertools import chain
 
 DEBUG = False
 
@@ -11,6 +12,51 @@ class LowPoly_Factry():
     def __init__(self) -> None:
         self.app: adsk.core.Application = adsk.core.Application.get()
         self.tmpMgr: adsk.fusion.TemporaryBRepManager = adsk.fusion.TemporaryBRepManager.get()
+        self.cgColor = adsk.fusion.CustomGraphicsShowThroughColorEffect.create(
+            adsk.core.Color.create(
+                255, 0, 0, 255
+            ),
+            0.2
+        )
+
+
+    def preview_meshes(
+        self,
+        entities: list,
+        tolerance: float,) -> int:
+
+        bodies = self._get_target_bodies(entities)
+        for body in bodies:
+            body.opacity = 0.3
+
+        root: adsk.fusion.Component = self.app.activeProduct.rootComponent
+        cgGroup: adsk.fusion.CustomGraphicsGroup = root.customGraphicsGroups.add()
+
+        count = 0
+        for body in bodies:
+            traMesh: adsk.fusion.TriangleMesh = self._get_triangleMesh(body, tolerance)
+            count += self._init_cg_wires(traMesh, cgGroup)
+
+        return count
+
+
+    def _init_cg_wires(
+        self,
+        traMesh: adsk.fusion.TriangleMesh,
+        cgGroup: adsk.fusion.CustomGraphicsGroup) -> int:
+
+        pointSet = self._group_by_count(traMesh.nodeCoordinatesAsFloat, 3)
+        nodeIndiceSet = self._group_by_count(traMesh.nodeIndices, 3)
+
+        for i0, i1, i2 in nodeIndiceSet:
+            lst = list(chain.from_iterable(
+                [pointSet[i0], pointSet[i1], pointSet[i2], pointSet[i0]]
+            ))
+            coords = adsk.fusion.CustomGraphicsCoordinates.create(lst)
+            lines: adsk.fusion.CustomGraphicsLines = cgGroup.addLines(coords, [0,1,2,3], True)
+            lines.weight = 1.1
+
+        return len(nodeIndiceSet)
 
 
     def export_meshes(
@@ -63,26 +109,36 @@ class LowPoly_Factry():
         return re.sub(r'[\\|/|:|?|.|"|<|>|\|]', '-', txt)
 
 
+    def _get_triangleMesh(
+        self,
+        body: adsk.fusion.BRepBody,
+        tolerance: float) -> adsk.fusion.TriangleMesh:
+
+        meshCalc: adsk.fusion.TriangleMeshCalculator = body.meshManager.createMeshCalculator()
+        meshCalc.surfaceTolerance = tolerance
+        return meshCalc.calculate()
+
+
     def _get_mesh_data(
         self,
         body: adsk.fusion.BRepBody,
         tolerance: float) -> tuple:
 
-        meshCalc: adsk.fusion.TriangleMeshCalculator = body.meshManager.createMeshCalculator()
-        meshCalc.surfaceTolerance = tolerance
-        traMesh: adsk.fusion.TriangleMesh = meshCalc.calculate()
+        traMesh: adsk.fusion.TriangleMesh = self._get_triangleMesh(body, tolerance)
+
+        nodeIndices = self._group_by_count(traMesh.nodeIndices, 3)
 
         points = self._group_by_list(
             traMesh.nodeCoordinates,
-            self._group_by_count(traMesh.nodeIndices, 3)
+            nodeIndices
         )
         tmpNormals = self._group_by_list(
             traMesh.normalVectors,
-            self._group_by_count(traMesh.nodeIndices, 3)
+            nodeIndices
         )
         normals = [self._synthesize_vectors(vs) for vs in tmpNormals]
 
-        return (points, normals)
+        return (points, normals, nodeIndices)
 
 
     def _get_mesh_datas(
@@ -168,21 +224,7 @@ class LowPoly_Factry():
         lengthRatio: float,
         name: str) -> str:
 
-        # meshCalc: adsk.fusion.TriangleMeshCalculator = body.meshManager.createMeshCalculator()
-        # meshCalc.surfaceTolerance = Tolerance
-        # traMesh: adsk.fusion.TriangleMesh = meshCalc.calculate()
-
-        # points = self._group_by_list(
-        #     traMesh.nodeCoordinates,
-        #     self._group_by_count(traMesh.nodeIndices, 3)
-        # )
-        # tmpNormals = self._group_by_list(
-        #     traMesh.normalVectors,
-        #     self._group_by_count(traMesh.nodeIndices, 3)
-        # )
-        # normals = [self._synthesize_vectors(vs) for vs in tmpNormals]
-
-        points, normals = mesh_data
+        points, normals, _ = mesh_data
         return self._initStlSource(points, normals, lengthRatio, name)
 
 

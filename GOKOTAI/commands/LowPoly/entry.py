@@ -64,6 +64,8 @@ _unitIpt: adsk.core.DropDownCommandInput = None
 _unit = 'mm'
 _fileStructureIpt: adsk.core.DropDownCommandInput = None
 _fileStructure = 0
+_previewMeshIpt: adsk.core.BoolValueCommandInput = None
+_numberOfTrianglesIpt: adsk.core.TextBoxCommandInput = None
 _toleranceIpt: adsk.core.FloatSliderCommandInput = None
 _tolerance = 0.1
 
@@ -139,7 +141,7 @@ def command_created(args: adsk.core.CommandCreatedEventArgs):
     _bodyIpt = inputs.addSelectionInput(
         'bodyIptId',
         '選択',
-        'ボディを選択'
+        'ボディ・コンポーネントを選択'
     )
     _bodyIpt.setSelectionLimits(0)
     _bodyIpt.addSelectionFilter(adsk.core.SelectionCommandInput.Bodies)
@@ -167,6 +169,26 @@ def command_created(args: adsk.core.CommandCreatedEventArgs):
     for fs in FILE_STRUCTRE_ITEMS:
         fileItems.add(fs, False, '')
     fileItems.item(0).isSelected = True
+    _fileStructureIpt.isEnabled = False
+
+    global _previewMeshIpt
+    _previewMeshIpt = inputs.addBoolValueInput(
+        '_previewMeshIptId',
+        'メッシュをプレビュー',
+        True,
+        '',
+        False
+    )
+
+    global _numberOfTrianglesIpt
+    _numberOfTrianglesIpt = inputs.addTextBoxCommandInput(
+        '_numberOfTrianglesIptId',
+        '三角形の数',
+        '0',
+        1,
+        True
+    )
+    _numberOfTrianglesIpt.isEnabled = False
 
     global _toleranceIpt, _tolerance
     _toleranceIpt = inputs.addFloatSliderCommandInput(
@@ -193,10 +215,54 @@ def command_created(args: adsk.core.CommandCreatedEventArgs):
     )
 
     futil.add_handler(
+        cmd.executePreview,
+        command_executePreview,
+        local_handlers=local_handlers
+    )
+
+    futil.add_handler(
         cmd.validateInputs,
         command_validateInputs,
         local_handlers=local_handlers
     )
+
+    futil.add_handler(
+        cmd.inputChanged,
+        command_inputChanged,
+        local_handlers=local_handlers
+    )
+
+    futil.add_handler(
+        cmd.preSelect,
+        command_preSelect,
+        local_handlers=local_handlers
+    )
+
+
+def command_preSelect(args: adsk.core.SelectionEventArgs):
+    futil.log(f'{CMD_NAME}:{args.firingEvent.name}')
+
+    entity = args.selection.entity
+    if not entity.isVisible:
+        args.isSelectable = False
+
+
+def command_inputChanged(args: adsk.core.InputChangedEventArgs):
+    futil.log(f'{CMD_NAME}:{args.firingEvent.name}')
+
+    global _toleranceIpt, _previewMeshIpt, _numberOfTrianglesIpt
+    if args.input == _toleranceIpt:
+        _previewMeshIpt.value = False
+        _numberOfTrianglesIpt.text = '0'
+
+    global _bodyIpt, _fileStructureIpt
+    if args.input == _bodyIpt:
+        _fileStructureIpt.isEnabled = not _bodyIpt.selectionCount == 0
+
+    if args.input == _previewMeshIpt:
+        if not _previewMeshIpt.value:
+            _numberOfTrianglesIpt.text = '0'
+        _numberOfTrianglesIpt.isEnabled = _previewMeshIpt.value
 
 
 def command_validateInputs(args: adsk.core.ValidateInputsEventArgs):
@@ -212,6 +278,24 @@ def command_destroy(args: adsk.core.CommandEventArgs):
 
     global local_handlers
     local_handlers = []
+
+
+def command_executePreview(args: adsk.core.CommandEventArgs):
+    futil.log(f'{CMD_NAME}:{args.firingEvent.name}')
+
+    global _previewMeshIpt
+    if not _previewMeshIpt.value:
+        return
+
+    global _bodyIpt
+    bodies = [_bodyIpt.selection(idx).entity for idx in range(_bodyIpt.selectionCount)]
+
+    global _fact, _toleranceIpt, _numberOfTrianglesIpt
+    count = _fact.preview_meshes(
+        bodies,
+        _toleranceIpt.valueOne,
+    )
+    _numberOfTrianglesIpt.text = str(count)
 
 
 def command_execute(args: adsk.core.CommandEventArgs):
