@@ -10,7 +10,7 @@ THIS_DIR = pathlib.Path(__file__).resolve().parent
 CORRECTION_PATH = THIS_DIR / 'correction.json'
 CORRECTION_KEY = 'correction_value'
 
-DEBUG = False
+DEBUG = True
 
 class FullsizeFactry():
     def __init__(self) -> None:
@@ -37,9 +37,9 @@ class FullsizeFactry():
     def getStateViewExtents(self) -> float:
         self.viewExtents = self._getViewExtents(self.getCorrectionTxt())
         if self.scaleCount > 0:
-            res = self.viewExtents * 1 / 4**(self.scaleCount)
+            res = self.viewExtents * 1 / 2**(self.scaleCount)
         elif self.scaleCount < 0:
-            res = self.viewExtents * 4**(abs(self.scaleCount))
+            res = self.viewExtents * 2**(abs(self.scaleCount))
         else:
             res = self.viewExtents
 
@@ -48,16 +48,18 @@ class FullsizeFactry():
     def reDraw(self) -> str:
         res = ''
         if self.scaleCount > 0:
-            res = f'{100*(2**(self.scaleCount))}%'
+            res = f'{100*(2*(self.scaleCount))}%'
         elif self.scaleCount < 0:
-            res = f'{100/(2**(abs(self.scaleCount)))}%'
+            res = f'{100/(2*(abs(self.scaleCount)))}%'
         else:
             res = '100%'
 
         cam: adsk.core.Camera = self.vp.camera
+        dumpmsg(f'reDraw1:{self.vp.camera.viewExtents}')
         cam.viewExtents = self.getStateViewExtents()
         self.vp.camera = cam
         self.vp.refresh()
+        dumpmsg(f'reDraw3:{self.vp.camera.viewExtents}')
 
         return res
 
@@ -96,7 +98,7 @@ class FullsizeFactry():
             dumpmsg(f'ViewSpace Dist {dist}-{dist * pixel2millimeter}')
 
             viewLength = dist * pixel2millimeter
-            ratio = (viewLength / self.validation_Length) ** 2
+            ratio = (viewLength / self.validation_Length)
 
             cam: adsk.core.Camera = self.vp.camera
             return self._getReflectsCorrectionValues(cam.viewExtents * ratio, correctionTxt)
