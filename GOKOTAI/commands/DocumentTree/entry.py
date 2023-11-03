@@ -54,8 +54,6 @@ _dataContainer = None
 _myCustomEventId = 'MyCustomEventId'
 _customEvent: adsk.core.CustomEvent = None
 
-
-
 # Executed when add-in is run.
 def start():
     # コマンドの定義を作成する。
@@ -114,18 +112,6 @@ def stop():
 def command_created(args: adsk.core.CommandCreatedEventArgs):
     futil.log(f'{CMD_NAME}: Command created event.')
 
-    # global _myCustomEventId, _customEvent
-    # try:
-    #     futil.app.unregisterCustomEvent(_myCustomEventId)
-    # except:
-    #     pass
-    # _customEvent = futil.app.registerCustomEvent(_myCustomEventId)
-    # onCustomEvent = MyCustomEventHandle()
-    # _customEvent.add(onCustomEvent)
-
-    # eventArgs = {'Value': 1}
-    # app.fireCustomEvent(_myCustomEventId, json.dumps(eventArgs)) 
-
     futil.add_handler(args.command.execute, command_execute, local_handlers=local_handlers)
     futil.add_handler(args.command.destroy, command_destroy, local_handlers=local_handlers)
 
@@ -148,7 +134,7 @@ def command_execute(args: adsk.core.CommandEventArgs):
         isResizable=True,
         width=400,
         height=300,
-        useNewWebBrowser=False #True
+        useNewWebBrowser=True
     )
     futil.add_handler(palette.closed, palette_closed)
     futil.add_handler(palette.navigatingURL, palette_navigating)

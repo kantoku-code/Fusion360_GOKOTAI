@@ -74,14 +74,16 @@
         var adskWaiter = setInterval(function () {
           if (window.adsk) {
             clearInterval(adskWaiter);
-
-            let ret = adsk.fusionSendData("htmlLoaded", "");
-            let obj = JSON.parse(ret);
-            $("#tree").jstree(true).settings.core.data = obj.data;
-            $("#tree").jstree(true).refresh();
+            adsk.fusionSendData("htmlLoaded", "").then((ret) => {
+              let obj = JSON.parse(ret || "null");
+              $("#tree").jstree(true).settings.core.data = obj.data;
+              $("#tree").jstree(true).refresh();
+            });
           }
         }, 100);
       });
+
+
 
       $("#tree").jstree({
         core: {
@@ -117,30 +119,6 @@
           },
         },
       });
-
-      // // double click
-      // $("#tree").on("dblclick", ".jstree-anchor", function (e) {
-      //   var args = {
-      //     id: $(this).parent().attr("id"),
-      //   };
-      //   adsk.fusionSendData("execScript", JSON.stringify(args));
-      // });
-
-      // // click
-      // $("#tree").on("click", ".jstree-anchor", function (e) {
-      //   var args = {
-      //     id: $(this).parent().attr("id"),
-      //   };
-      //   adsk.fusionSendData("click", JSON.stringify(args));
-      // });
-
-      // mouseover
-      // $("#tree").on("mouseover", ".jstree-anchor", function (e) {
-      //   var args = {
-      //     id: $(this).parent().attr("id"),
-      //   };
-      //   adsk.fusionSendData("mouseover", JSON.stringify(args));
-      // });
 
       var to = false;
       $("#search-input").keyup(function () {
